@@ -28,16 +28,16 @@ function getParentState(CL) {
     return { state: item.state, set: item.renderer };
 }
 exports.getParentState = getParentState;
-let tempCallStack = [];
-function call(fn, state) {
-    if (tempCallStack.indexOf(fn) === -1) {
-        tempCallStack.push(fn);
-        setTimeout(() => {
-            fn.call(state);
-            tempCallStack = tempCallStack.filter((item) => item !== fn);
-        }, 0);
-    }
-}
+// let tempCallStack: any = [];
+// function call(fn: any, state: any) {
+//   if (tempCallStack.indexOf(fn) === -1) {
+//     tempCallStack.push(fn);
+//     setTimeout(() => {
+//       fn.call(state);
+//       tempCallStack = tempCallStack.filter((item: any) => item !== fn);
+//     }, 0);
+//   }
+// }
 function getCallStack(splitIndex = 3) {
     var _a, _b, _c, _d, _e, _f, _g, _h;
     const stack = new Error().stack;
@@ -106,13 +106,8 @@ function useX(CL, label) {
                 state,
                 label,
                 setLogs: [],
-                actionLogs: [],
                 index: 0,
-                // copy:
-                //   state && typeof state === "object"
-                //     ? //@ts-ignore
-                //       deepClone(state)
-                //     : {},
+                copy: deepClone(state),
             };
             //@ts-ignore
             state && state.onChange && state.onChange();
@@ -129,7 +124,6 @@ function useX(CL, label) {
             try {
                 if (typeof fn === "function") {
                     fn.apply(exports.xRefs[label].state, props);
-                    exports.xRefs[label].onSet && exports.xRefs[label].onSet(fn);
                     // actions.push(fn);
                     // xRefs[label].state = { ...xRefs[label].state };
                 }
@@ -147,61 +141,110 @@ function useX(CL, label) {
             const updateSet = () => {
                 var _a;
                 console.time();
-                if (exports.xConfig.autoDestructureState || exports.xConfig.enableDebugging) {
-                    let changeList = {};
-                    if (copy) {
-                        changeList = findDiff(copy, exports.xRefs[label].state);
-                        if (changeList && Object.keys(changeList).length > 0) {
-                            [...Object.keys(changeList)].forEach((key) => {
-                                changeList["state." + key] = changeList[key];
-                                delete changeList[key];
-                            });
-                        }
+                let changeList = {};
+                if (copy) {
+                    changeList = findDiff(copy, exports.xRefs[label].state);
+                    if (changeList && Object.keys(changeList).length > 0) {
+                        [...Object.keys(changeList)].forEach((key) => {
+                            changeList["state." + key] = changeList[key];
+                            delete changeList[key];
+                        });
                     }
-                    Object.keys(changeList).forEach((path) => {
-                        updateNestedObject(exports.xRefs[label].state, path
-                            .split(".")
-                            .slice(1, path.split(".").length - 1)
-                            .join("."));
-                    });
-                    if (exports.xConfig.enableDebugging) {
-                        const log = {
-                            fileName: fname.split("?")[0],
-                            functionName,
-                            lineNumber,
-                            changeList,
-                            props,
-                            index: exports.xRefs[label].index + 1,
-                            name: fn.name || "",
-                            errorOccured,
-                            errorMessage,
-                        };
-                        exports.xConfig.enableConsoleLogging &&
-                            console.log("useX - " + log.name, log);
-                        exports.xConfig.enableConsoleLogging &&
-                            console.log("useX - updated state", (_a = exports.xRefs[label]) === null || _a === void 0 ? void 0 : _a.state);
-                        exports.xRefs[label].setLogs.unshift(log);
-                        exports.xRefs[label].index++;
-                        exports.xRefs[label].setLogs.length > 10 && exports.xRefs[label].setLogs.pop();
-                    }
+                }
+                Object.keys(changeList).forEach((path) => {
+                    updateNestedObject(exports.xRefs[label].state, path
+                        .split(".")
+                        .slice(1, path.split(".").length - 1)
+                        .join("."));
+                });
+                if (exports.xConfig.enableDebugging) {
+                    const log = {
+                        fileName: fname.split("?")[0],
+                        functionName,
+                        lineNumber,
+                        changeList,
+                        props,
+                        index: exports.xRefs[label].index + 1,
+                        name: fn.name || "",
+                        errorOccured,
+                        errorMessage,
+                    };
+                    exports.xConfig.enableConsoleLogging &&
+                        console.log("useX - " + log.name, log);
+                    exports.xConfig.enableConsoleLogging &&
+                        console.log("useX - updated state", (_a = exports.xRefs[label]) === null || _a === void 0 ? void 0 : _a.state);
+                    exports.xRefs[label].setLogs.unshift(log);
+                    exports.xRefs[label].index++;
+                    exports.xRefs[label].setLogs.length > 10 && exports.xRefs[label].setLogs.pop();
                 }
                 console.timeEnd();
             };
-            if (exports.xRefs[label].state.onChange) {
-                call(exports.xRefs[label].state.onChange, exports.xRefs[label].state);
-                updateSet();
-                window.setTimeout(() => {
-                    exports.xRefs[label].state = destructureWithProto(exports.xRefs[label].state);
-                    setCount(count + 1);
-                    (exports.listeners === null || exports.listeners === void 0 ? void 0 : exports.listeners.onStateChange) && exports.listeners.onStateChange();
-                }, 0);
+            exports.xRefs[label].state.onChange && exports.xRefs[label].state.onChange();
+            updateSet();
+            exports.xRefs[label].state = destructureWithProto(exports.xRefs[label].state);
+            setCount(count + 1);
+            (exports.listeners === null || exports.listeners === void 0 ? void 0 : exports.listeners.onStateChange) && exports.listeners.onStateChange();
+        };
+        exports.xRefs[label].actionRenderer = (fn, ...props) => {
+            let copy = {};
+            if (exports.xConfig.enableDebugging) {
+                copy = deepClone(exports.xRefs[label].state);
             }
-            else {
-                updateSet();
-                setCount(count + 1);
-                exports.xRefs[label].state = destructureWithProto(exports.xRefs[label].state);
-                (exports.listeners === null || exports.listeners === void 0 ? void 0 : exports.listeners.onStateChange) && exports.listeners.onStateChange();
+            let errorOccured = false;
+            let errorMessage = "";
+            try {
+                if (typeof fn === "function") {
+                    fn.apply(exports.xRefs[label].state, props);
+                    exports.xRefs[label].onPlus && exports.xRefs[label].onPlus(fn);
+                    // actions.push(fn);
+                    // xRefs[label].state = { ...xRefs[label].state };
+                }
             }
+            catch (e) {
+                console.error(e);
+                errorOccured = true;
+                errorMessage = e === null || e === void 0 ? void 0 : e.message;
+            }
+            if (typeof fn !== "function") {
+                throw new Error("set is called and no action is passed");
+            }
+            let { fileName, functionName, lineNumber } = getCallStack();
+            let fname = fileName.split("/")[fileName.split("/").length - 1];
+            const updateSet = () => {
+                var _a;
+                let changeList = {};
+                if (copy) {
+                    changeList = findDiff(copy, exports.xRefs[label].state);
+                    if (changeList && Object.keys(changeList).length > 0) {
+                        [...Object.keys(changeList)].forEach((key) => {
+                            changeList["state." + key] = changeList[key];
+                            delete changeList[key];
+                        });
+                    }
+                }
+                const log = {
+                    fileName: fname.split("?")[0],
+                    functionName,
+                    lineNumber,
+                    changeList,
+                    props,
+                    index: exports.xRefs[label].index + 1,
+                    name: fn.name || "",
+                    errorOccured,
+                    errorMessage,
+                };
+                exports.xConfig.enableConsoleLogging && console.log("useX - " + log.name, log);
+                exports.xConfig.enableConsoleLogging &&
+                    console.log("useX - updated state", (_a = exports.xRefs[label]) === null || _a === void 0 ? void 0 : _a.state);
+                exports.xRefs[label].setLogs.unshift(log);
+                exports.xRefs[label].index++;
+                exports.xRefs[label].setLogs.length > 10 && exports.xRefs[label].setLogs.pop();
+            };
+            exports.xRefs[label].state.onChange && exports.xRefs[label].state.onChange();
+            exports.xConfig.enableDebugging && updateSet();
+            exports.xRefs[label].state = destructureWithProto(exports.xRefs[label].state);
+            setCount(count + 1);
+            (exports.listeners === null || exports.listeners === void 0 ? void 0 : exports.listeners.onStateChange) && exports.listeners.onStateChange();
         };
     };
     setAgain();
@@ -216,9 +259,18 @@ function useX(CL, label) {
         state: exports.xRefs[label].state,
         set: exports.xRefs[label].renderer,
         stateChanged: count,
-        onSet: (fn) => {
+        plus: exports.xRefs[label].actionRenderer,
+        onPlus: (fn) => {
             if (typeof fn === "function")
-                exports.xRefs[label].onSet = fn;
+                exports.xRefs[label].onPlus = fn;
+        },
+        saveCopy() {
+            exports.xRefs[label].copy = deepClone(exports.xRefs[label].state);
+        },
+        resetState() {
+            exports.xRefs[label].renderer(function reset() {
+                exports.xRefs[label].state = Object.assign(Object.assign({}, destructureWithProto(exports.xRefs[label].state)), exports.xRefs[label].copy);
+            });
         },
         // trigger(fn: Function) {
         //   if (typeof fn === "function") {
@@ -229,7 +281,7 @@ function useX(CL, label) {
     };
 }
 exports.useX = useX;
-// export const onAction = (actionsList: any) => {
+// export const onPlus = (actionsList: any) => {
 //   return actionsList.find((item: any) => actions.find(item));
 // };
 // export const useXEffect = (fn: Function, isActionCalled: boolean) => {
@@ -338,7 +390,7 @@ exports.StateView = StateView;
 const Switch = ({ State }) => {
     var _a, _b, _c;
     const [selectedTab, setSelectedTab] = (0, react_1.useState)(0);
-    const tabs = ["State", "Set Logs", "memos", "events"];
+    const tabs = ["State", "Set/Action", "memos", "events"];
     const [count, setCount] = (0, react_1.useState)(0);
     const spanStyle = (isSelected) => {
         return {
@@ -455,7 +507,7 @@ const Treeview = ({ state, autoOpenFirstLevel = false }) => {
                 })] }) }));
 };
 exports.Treeview = Treeview;
-const UseXDevTools = ({ XIconPosition = { bottom: "50px", right: "50px" }, enableConsoleLogging = false, hideXPlusIcon = false, }) => {
+const UseXDevTools = ({ XIconPosition = { bottom: "50px", right: "50px" }, enableConsoleLogging = false, hideXPlusIcon = false, disableToggleESCKey = false, }) => {
     const [showTools, setShowTools] = (0, react_1.useState)(false);
     const [count, setCount] = (0, react_1.useState)(0);
     (0, react_1.useEffect)(() => {
@@ -464,10 +516,12 @@ const UseXDevTools = ({ XIconPosition = { bottom: "50px", right: "50px" }, enabl
                 setShowTools(!showTools);
             }
         }
-        window.addEventListener("keydown", handleKeyPress);
-        return () => {
-            window.removeEventListener("keydown", handleKeyPress);
-        };
+        if (!disableToggleESCKey) {
+            window.addEventListener("keydown", handleKeyPress);
+            return () => {
+                window.removeEventListener("keydown", handleKeyPress);
+            };
+        }
     }, [showTools, setShowTools]);
     (0, react_1.useEffect)(() => {
         exports.listeners.onStateChange = () => {
@@ -624,7 +678,7 @@ const useXFetch = (url = "/", qsObj = {}, method = "get", payload = null, header
                     setError(null);
                 })
                     .catch((error) => {
-                    if (error.name !== "AbortError") {
+                    if ((error === null || error === void 0 ? void 0 : error.name) !== "AbortError") {
                         setError(error);
                         setStatus("error");
                     }
@@ -658,24 +712,26 @@ const useXAsync = (asyncFunction) => {
     const [error, setError] = (0, react_1.useState)(null);
     const [status, setStatus] = (0, react_1.useState)("idle");
     const call = (...args) => __awaiter(void 0, void 0, void 0, function* () {
-        setIsLoading(true);
-        setStatus("loading");
-        setError(null);
-        try {
-            const result = yield asyncFunction(...args);
-            setData(result);
+        if (!isLoading) {
+            setIsLoading(true);
+            setStatus("loading");
             setError(null);
-            setStatus("success");
-        }
-        catch (err) {
-            if ((err === null || err === void 0 ? void 0 : err.name) !== "AbortError") {
-                setError(err);
-                setData(null);
-                setStatus("error");
+            try {
+                const result = yield asyncFunction(...args);
+                setData(result);
+                setError(null);
+                setStatus("success");
             }
-        }
-        finally {
-            setIsLoading(false);
+            catch (err) {
+                if ((err === null || err === void 0 ? void 0 : err.name) !== "AbortError") {
+                    setError(err);
+                    setData(null);
+                    setStatus("error");
+                }
+            }
+            finally {
+                setIsLoading(false);
+            }
         }
     });
     return {

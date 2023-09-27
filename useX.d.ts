@@ -1,4 +1,4 @@
-import React, { Component, ReactNode } from "react";
+import { Component, ReactNode } from "react";
 import "./App.css";
 export declare const xRefs: any;
 export declare const xConfig: {
@@ -21,7 +21,10 @@ export declare function useX<T extends Object>(CL: new () => T, label?: any): {
     state: T;
     set: Function;
     stateChanged: number;
-    onSet: Function;
+    onPlus: Function;
+    plus: Function;
+    saveCopy: Function;
+    resetState: Function;
 };
 export declare const Collapsable: ({ children, label }: any) => import("react/jsx-runtime").JSX.Element;
 export declare const ErrorComponent: ({ Error, message }: any) => import("react/jsx-runtime").JSX.Element;
@@ -52,10 +55,11 @@ type TXDevToolsProps = {
     hideXPlusIcon?: boolean;
     enableDevTools?: boolean;
     children?: any;
+    disableToggleESCKey?: boolean;
 };
 export declare function XPlusWrapper(props: TXDevToolsProps): import("react/jsx-runtime").JSX.Element;
 export declare const Treeview: ({ state, autoOpenFirstLevel }: any) => import("react/jsx-runtime").JSX.Element;
-export declare const UseXDevTools: ({ XIconPosition, enableConsoleLogging, hideXPlusIcon, }: TXDevToolsProps) => import("react/jsx-runtime").JSX.Element;
+export declare const UseXDevTools: ({ XIconPosition, enableConsoleLogging, hideXPlusIcon, disableToggleESCKey, }: TXDevToolsProps) => import("react/jsx-runtime").JSX.Element;
 export declare const ValueRenderer: ({ text }: any) => import("react/jsx-runtime").JSX.Element;
 export type RequestParamsType = {
     url: string;
@@ -106,13 +110,13 @@ type ParamsToObject<T extends string[]> = {
 export declare function XEvents<T extends string[]>(...eventNames: T): ParamsToObject<T>;
 export declare function usePagination(initialPage?: number, initialTotalPages?: number, initialItemsPerPage?: number): {
     currentPage: number;
-    setPage: React.Dispatch<React.SetStateAction<number>>;
+    setPage: import("react").Dispatch<import("react").SetStateAction<number>>;
     next: () => void;
     prev: () => void;
-    setTotalPages: React.Dispatch<React.SetStateAction<number>>;
+    setTotalPages: import("react").Dispatch<import("react").SetStateAction<number>>;
     itemsPerPage: number;
     totalPages: number;
-    setItemsPerPage: React.Dispatch<React.SetStateAction<number>>;
+    setItemsPerPage: import("react").Dispatch<import("react").SetStateAction<number>>;
     resetPage: () => void;
 };
 export declare function hasScrollReachedTheEnd(event: any, reverse?: boolean): boolean;
