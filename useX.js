@@ -1,4 +1,30 @@
 "use strict";
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,10 +34,46 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deepClone = exports.paginateArray = exports.hasScrollReachedTheEnd = exports.usePagination = exports.XEvents = exports.useQ = exports.useXForm = exports.hasNonEmptyValue = exports.useXAsync = exports.useXFetch = exports.xFetch = exports.XFetchConfig = exports.ValueRenderer = exports.UseXDevTools = exports.Treeview = exports.XPlusWrapper = exports.Switch = exports.StateView = exports.LabelRenderer = exports.ErrorBoundary = exports.ErrorComponent = exports.Collapsable = exports.useX = exports.findDiff = exports.getCallStack = exports.getParentState = exports.listeners = exports.xConfig = exports.xRefs = void 0;
-const jsx_runtime_1 = require("react/jsx-runtime");
-const react_1 = require("react");
+var jsx_runtime_1 = require("react/jsx-runtime");
+var react_1 = require("react");
 require("./App.css");
 exports.xRefs = {};
 exports.xConfig = {
@@ -24,7 +86,7 @@ exports.listeners = {
 };
 function getParentState(CL) {
     //
-    const item = exports.xRefs[CL.name];
+    var item = exports.xRefs[CL.name];
     return { state: item.state, set: item.renderer };
 }
 exports.getParentState = getParentState;
@@ -38,49 +100,51 @@ exports.getParentState = getParentState;
 //     }, 0);
 //   }
 // }
-function getCallStack(splitIndex = 3) {
+function getCallStack(splitIndex) {
     var _a, _b, _c, _d, _e, _f, _g, _h;
-    const stack = new Error().stack;
-    const stackLines = ((_b = (_a = stack === null || stack === void 0 ? void 0 : stack.split("\n")[splitIndex]) === null || _a === void 0 ? void 0 : _a.trim()) === null || _b === void 0 ? void 0 : _b.split("(")) || [];
-    const functionName = (stackLines === null || stackLines === void 0 ? void 0 : stackLines.length) > 1
+    if (splitIndex === void 0) { splitIndex = 3; }
+    var stack = new Error().stack;
+    var stackLines = ((_b = (_a = stack === null || stack === void 0 ? void 0 : stack.split("\n")[splitIndex]) === null || _a === void 0 ? void 0 : _a.trim()) === null || _b === void 0 ? void 0 : _b.split("(")) || [];
+    var functionName = (stackLines === null || stackLines === void 0 ? void 0 : stackLines.length) > 1
         ? (_c = stackLines === null || stackLines === void 0 ? void 0 : stackLines[0]) === null || _c === void 0 ? void 0 : _c.split(" ")[1].trim()
         : "Anonymous";
-    const fileNameLineNumber = stackLines === null || stackLines === void 0 ? void 0 : stackLines[(stackLines === null || stackLines === void 0 ? void 0 : stackLines.length) > 1 ? 1 : 0];
-    const fileNames = (_e = (_d = fileNameLineNumber === null || fileNameLineNumber === void 0 ? void 0 : fileNameLineNumber.split("?")) === null || _d === void 0 ? void 0 : _d[0]) === null || _e === void 0 ? void 0 : _e.split("/");
-    const fileName = fileNames === null || fileNames === void 0 ? void 0 : fileNames[(fileNames === null || fileNames === void 0 ? void 0 : fileNames.length) - 1];
-    const lineNumber = (_h = (_g = (_f = fileNameLineNumber === null || fileNameLineNumber === void 0 ? void 0 : fileNameLineNumber.split("?")) === null || _f === void 0 ? void 0 : _f[1]) === null || _g === void 0 ? void 0 : _g.split(":")) === null || _h === void 0 ? void 0 : _h[1];
+    var fileNameLineNumber = stackLines === null || stackLines === void 0 ? void 0 : stackLines[(stackLines === null || stackLines === void 0 ? void 0 : stackLines.length) > 1 ? 1 : 0];
+    var fileNames = (_e = (_d = fileNameLineNumber === null || fileNameLineNumber === void 0 ? void 0 : fileNameLineNumber.split("?")) === null || _d === void 0 ? void 0 : _d[0]) === null || _e === void 0 ? void 0 : _e.split("/");
+    var fileName = fileNames === null || fileNames === void 0 ? void 0 : fileNames[(fileNames === null || fileNames === void 0 ? void 0 : fileNames.length) - 1];
+    var lineNumber = (_h = (_g = (_f = fileNameLineNumber === null || fileNameLineNumber === void 0 ? void 0 : fileNameLineNumber.split("?")) === null || _f === void 0 ? void 0 : _f[1]) === null || _g === void 0 ? void 0 : _g.split(":")) === null || _h === void 0 ? void 0 : _h[1];
     return {
-        functionName,
-        fileName,
-        lineNumber,
+        functionName: functionName,
+        fileName: fileName,
+        lineNumber: lineNumber,
     };
 }
 exports.getCallStack = getCallStack;
-function findDiff(obj1, obj2, path = "") {
-    const changes = {};
+function findDiff(obj1, obj2, path) {
+    if (path === void 0) { path = ""; }
+    var changes = {};
     if (typeof obj1 === "object" &&
         obj1 !== null &&
         typeof obj2 === "object" &&
         obj2 !== null) {
-        for (const key in obj1) {
-            const newPath = path ? `${path}.${key}` : key;
+        for (var key in obj1) {
+            var newPath = path ? "".concat(path, ".").concat(key) : key;
             if (obj2.hasOwnProperty(key)) {
-                const nestedChanges = findDiff(obj1[key], obj2[key], newPath);
+                var nestedChanges = findDiff(obj1[key], obj2[key], newPath);
                 Object.assign(changes, nestedChanges);
             }
             else {
-                changes[`${newPath} [D]`] = undefined;
+                changes["".concat(newPath, " [D]")] = undefined;
             }
         }
-        for (const key in obj2) {
-            const newPath = path ? `${path}.${key}` : key;
+        for (var key in obj2) {
+            var newPath = path ? "".concat(path, ".").concat(key) : key;
             if (!obj1.hasOwnProperty(key)) {
-                changes[`${newPath} [A]`] = obj2[key];
+                changes["".concat(newPath, " [A]")] = obj2[key];
             }
         }
     }
     else if (obj1 !== obj2) {
-        changes[`${path} [M]`] = obj2;
+        changes["".concat(path, " [M]")] = obj2;
     }
     return changes;
 }
@@ -95,16 +159,16 @@ exports.findDiff = findDiff;
 //   return inputString;
 // }
 function useX(CL, label) {
-    const [count, setCount] = (0, react_1.useState)(0);
+    var _a = (0, react_1.useState)(0), count = _a[0], setCount = _a[1];
     if (!label) {
         label = CL.name;
     }
-    const intiate = () => {
+    var intiate = function () {
         if (!exports.xRefs[label]) {
-            const state = new CL();
+            var state = new CL();
             exports.xRefs[label] = {
-                state,
-                label,
+                state: state,
+                label: label,
                 setLogs: [],
                 index: 0,
                 copy: deepClone(state),
@@ -113,14 +177,18 @@ function useX(CL, label) {
             state && state.onChange && state.onChange();
         }
     };
-    const setAgain = () => {
+    var setAgain = function () {
         if (!exports.xRefs[label]) {
             intiate();
         }
-        exports.xRefs[label].renderer = (fn, ...props) => {
-            const copy = deepClone(exports.xRefs[label].state);
-            let errorOccured = false;
-            let errorMessage = "";
+        exports.xRefs[label].renderer = function (fn) {
+            var props = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                props[_i - 1] = arguments[_i];
+            }
+            var copy = deepClone(exports.xRefs[label].state);
+            var errorOccured = false;
+            var errorMessage = "";
             try {
                 if (typeof fn === "function") {
                     fn.apply(exports.xRefs[label].state, props);
@@ -136,38 +204,38 @@ function useX(CL, label) {
             if (typeof fn !== "function") {
                 throw new Error("set is called and no action is passed");
             }
-            let { fileName, functionName, lineNumber } = getCallStack();
-            let fname = fileName.split("/")[fileName.split("/").length - 1];
-            const updateSet = () => {
+            var _a = getCallStack(), fileName = _a.fileName, functionName = _a.functionName, lineNumber = _a.lineNumber;
+            var fname = fileName.split("/")[fileName.split("/").length - 1];
+            var updateSet = function () {
                 var _a;
                 console.time();
-                let changeList = {};
+                var changeList = {};
                 if (copy) {
                     changeList = findDiff(copy, exports.xRefs[label].state);
                     if (changeList && Object.keys(changeList).length > 0) {
-                        [...Object.keys(changeList)].forEach((key) => {
+                        __spreadArray([], Object.keys(changeList), true).forEach(function (key) {
                             changeList["state." + key] = changeList[key];
                             delete changeList[key];
                         });
                     }
                 }
-                Object.keys(changeList).forEach((path) => {
+                Object.keys(changeList).forEach(function (path) {
                     updateNestedObject(exports.xRefs[label].state, path
                         .split(".")
                         .slice(1, path.split(".").length - 1)
                         .join("."));
                 });
                 if (exports.xConfig.enableDebugging) {
-                    const log = {
+                    var log = {
                         fileName: fname.split("?")[0],
-                        functionName,
-                        lineNumber,
-                        changeList,
-                        props,
+                        functionName: functionName,
+                        lineNumber: lineNumber,
+                        changeList: changeList,
+                        props: props,
                         index: exports.xRefs[label].index + 1,
                         name: fn.name || "",
-                        errorOccured,
-                        errorMessage,
+                        errorOccured: errorOccured,
+                        errorMessage: errorMessage,
                     };
                     exports.xConfig.enableConsoleLogging &&
                         console.log("useX - " + log.name, log);
@@ -185,13 +253,17 @@ function useX(CL, label) {
             setCount(count + 1);
             (exports.listeners === null || exports.listeners === void 0 ? void 0 : exports.listeners.onStateChange) && exports.listeners.onStateChange();
         };
-        exports.xRefs[label].actionRenderer = (fn, ...props) => {
-            let copy = {};
+        exports.xRefs[label].actionRenderer = function (fn) {
+            var props = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                props[_i - 1] = arguments[_i];
+            }
+            var copy = {};
             if (exports.xConfig.enableDebugging) {
                 copy = deepClone(exports.xRefs[label].state);
             }
-            let errorOccured = false;
-            let errorMessage = "";
+            var errorOccured = false;
+            var errorMessage = "";
             try {
                 if (typeof fn === "function") {
                     fn.apply(exports.xRefs[label].state, props);
@@ -208,30 +280,30 @@ function useX(CL, label) {
             if (typeof fn !== "function") {
                 throw new Error("set is called and no action is passed");
             }
-            let { fileName, functionName, lineNumber } = getCallStack();
-            let fname = fileName.split("/")[fileName.split("/").length - 1];
-            const updateSet = () => {
+            var _a = getCallStack(), fileName = _a.fileName, functionName = _a.functionName, lineNumber = _a.lineNumber;
+            var fname = fileName.split("/")[fileName.split("/").length - 1];
+            var updateSet = function () {
                 var _a;
-                let changeList = {};
+                var changeList = {};
                 if (copy) {
                     changeList = findDiff(copy, exports.xRefs[label].state);
                     if (changeList && Object.keys(changeList).length > 0) {
-                        [...Object.keys(changeList)].forEach((key) => {
+                        __spreadArray([], Object.keys(changeList), true).forEach(function (key) {
                             changeList["state." + key] = changeList[key];
                             delete changeList[key];
                         });
                     }
                 }
-                const log = {
+                var log = {
                     fileName: fname.split("?")[0],
-                    functionName,
-                    lineNumber,
-                    changeList,
-                    props,
+                    functionName: functionName,
+                    lineNumber: lineNumber,
+                    changeList: changeList,
+                    props: props,
                     index: exports.xRefs[label].index + 1,
                     name: fn.name || "",
-                    errorOccured,
-                    errorMessage,
+                    errorOccured: errorOccured,
+                    errorMessage: errorMessage,
                 };
                 exports.xConfig.enableConsoleLogging && console.log("useX - " + log.name, log);
                 exports.xConfig.enableConsoleLogging &&
@@ -248,9 +320,9 @@ function useX(CL, label) {
         };
     };
     setAgain();
-    (0, react_1.useEffect)(() => {
+    (0, react_1.useEffect)(function () {
         setAgain();
-        return () => {
+        return function () {
             delete exports.xRefs[label];
             (exports.listeners === null || exports.listeners === void 0 ? void 0 : exports.listeners.onStateChange) && exports.listeners.onStateChange();
         };
@@ -260,16 +332,16 @@ function useX(CL, label) {
         set: exports.xRefs[label].renderer,
         stateChanged: count,
         plus: exports.xRefs[label].actionRenderer,
-        onPlus: (fn) => {
+        onPlus: function (fn) {
             if (typeof fn === "function")
                 exports.xRefs[label].onPlus = fn;
         },
-        saveCopy() {
+        saveCopy: function () {
             exports.xRefs[label].copy = deepClone(exports.xRefs[label].state);
         },
-        resetState() {
+        resetState: function () {
             exports.xRefs[label].renderer(function reset() {
-                exports.xRefs[label].state = Object.assign(Object.assign({}, destructureWithProto(exports.xRefs[label].state)), exports.xRefs[label].copy);
+                exports.xRefs[label].state = __assign(__assign({}, destructureWithProto(exports.xRefs[label].state)), exports.xRefs[label].copy);
             });
         },
         // trigger(fn: Function) {
@@ -299,31 +371,32 @@ exports.useX = useX;
 //   return returnVal || state;
 // };
 function destructureWithProto(obj) {
-    const result = Object.assign({}, obj);
-    const prototype = Object.getPrototypeOf(obj);
+    var result = __assign({}, obj);
+    var prototype = Object.getPrototypeOf(obj);
     if (prototype) {
-        const prototypeProps = Object.getOwnPropertyNames(prototype);
-        for (const prop of prototypeProps) {
+        var prototypeProps = Object.getOwnPropertyNames(prototype);
+        for (var _i = 0, prototypeProps_1 = prototypeProps; _i < prototypeProps_1.length; _i++) {
+            var prop = prototypeProps_1[_i];
             result[prop] = prototype[prop];
         }
     }
     return result;
 }
 function updateNestedObject(obj, path) {
-    const keys = path.split(".");
-    const newObj = obj;
-    let current = newObj;
-    for (let i = 0; i < keys.length; i++) {
-        const key = keys[i];
+    var keys = path.split(".");
+    var newObj = obj;
+    var current = newObj;
+    for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
         current[key] = Array.isArray(current[key])
-            ? [...current[key]]
-            : Object.assign({}, current[key]);
+            ? __spreadArray([], current[key], true) : __assign({}, current[key]);
         current = current[key];
     }
     return newObj;
 }
-const Collapsable = ({ children, label }) => {
-    const [open, setOpen] = (0, react_1.useState)(false);
+var Collapsable = function (_a) {
+    var children = _a.children, label = _a.label;
+    var _b = (0, react_1.useState)(false), open = _b[0], setOpen = _b[1];
     return exports.xRefs[label] ? ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsxs)("div", { style: {
                     padding: "12px 15px",
                     borderTop: "1px solid rgb(232 238 231)",
@@ -338,7 +411,7 @@ const Collapsable = ({ children, label }) => {
                     position: "sticky",
                     top: 0,
                     zIndex: 1000002,
-                }, onMouseDown: () => setOpen(!open), children: [(0, jsx_runtime_1.jsx)("span", { style: {
+                }, onMouseDown: function () { return setOpen(!open); }, children: [(0, jsx_runtime_1.jsx)("span", { style: {
                             display: "inline-block",
                             paddingLeft: "5px",
                             fontSize: "16px",
@@ -350,49 +423,56 @@ const Collapsable = ({ children, label }) => {
                 }, children: children }))] })) : ((0, jsx_runtime_1.jsx)(jsx_runtime_1.Fragment, {}));
 };
 exports.Collapsable = Collapsable;
-const ErrorComponent = ({ Error, message }) => {
+var ErrorComponent = function (_a) {
+    var Error = _a.Error, message = _a.message;
     console.error(Error);
     return ((0, jsx_runtime_1.jsxs)("span", { title: (Error === null || Error === void 0 ? void 0 : Error.stack) || "", style: { color: "red" }, children: [message, " check console for details"] }));
 };
 exports.ErrorComponent = ErrorComponent;
-class ErrorBoundary extends react_1.Component {
-    constructor(props) {
-        super(props);
-        this.state = {
+var ErrorBoundary = /** @class */ (function (_super) {
+    __extends(ErrorBoundary, _super);
+    function ErrorBoundary(props) {
+        var _this = _super.call(this, props) || this;
+        _this.state = {
             error: null,
             errorMessage: "",
         };
+        return _this;
     }
-    componentDidCatch(error) {
+    ErrorBoundary.prototype.componentDidCatch = function (error) {
         this.setState({
-            error,
+            error: error,
             errorMessage: error.message,
         });
-    }
-    render() {
-        const { error, errorMessage } = this.state;
-        const { Error } = this.props;
+    };
+    ErrorBoundary.prototype.render = function () {
+        var _a = this.state, error = _a.error, errorMessage = _a.errorMessage;
+        var Error = this.props.Error;
         if (error) {
             return (0, jsx_runtime_1.jsx)(Error, { error: error, message: errorMessage });
         }
         return this.props && this.props.children ? ((0, jsx_runtime_1.jsx)(jsx_runtime_1.Fragment, { children: this.props.children })) : ((0, jsx_runtime_1.jsx)(jsx_runtime_1.Fragment, { children: "Error" }));
-    }
-}
+    };
+    return ErrorBoundary;
+}(react_1.Component));
 exports.ErrorBoundary = ErrorBoundary;
-const LabelRenderer = ({ label }) => {
+var LabelRenderer = function (_a) {
+    var label = _a.label;
     return ((0, jsx_runtime_1.jsx)("span", { children: label.endsWith("[M]") ? ((0, jsx_runtime_1.jsxs)("span", { title: "Modified", style: { color: "#bc7a00" }, children: [label.substr(0, label.length - 3), " "] })) : label.endsWith("[A]") ? ((0, jsx_runtime_1.jsxs)("span", { title: "Added", style: { color: "green" }, children: [label.substr(0, label.length - 3), " "] })) : label.endsWith("[D]") ? ((0, jsx_runtime_1.jsxs)("span", { title: "Deleted", style: { color: "#df0000" }, children: [label.substr(0, label.length - 3), " "] })) : ((0, jsx_runtime_1.jsx)("span", { children: label })) }));
 };
 exports.LabelRenderer = LabelRenderer;
-const StateView = ({ state, boldFont = true, autoOpenFirstLevel = false, }) => {
+var StateView = function (_a) {
+    var state = _a.state, _b = _a.boldFont, boldFont = _b === void 0 ? true : _b, _c = _a.autoOpenFirstLevel, autoOpenFirstLevel = _c === void 0 ? false : _c;
     return ((0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)("div", { style: { marginLeft: "-30px" }, children: (0, jsx_runtime_1.jsx)(exports.Treeview, { autoOpenFirstLevel: autoOpenFirstLevel, state: state, boldFont: boldFont }) }) }));
 };
 exports.StateView = StateView;
-const Switch = ({ State }) => {
-    var _a, _b, _c;
-    const [selectedTab, setSelectedTab] = (0, react_1.useState)(0);
-    const tabs = ["State", "Set/Action", "memos", "events"];
-    const [count, setCount] = (0, react_1.useState)(0);
-    const spanStyle = (isSelected) => {
+var Switch = function (_a) {
+    var _b, _c, _d;
+    var State = _a.State;
+    var _e = (0, react_1.useState)(0), selectedTab = _e[0], setSelectedTab = _e[1];
+    var tabs = ["State", "Set/Action", "memos", "events"];
+    var _f = (0, react_1.useState)(0), count = _f[0], setCount = _f[1];
+    var spanStyle = function (isSelected) {
         return {
             border: " 1px solid #DDD",
             color: isSelected ? "white" : "#444",
@@ -413,13 +493,14 @@ const Switch = ({ State }) => {
                     margin: "0 auto",
                     marginBottom: "10px",
                     textAlign: "left",
-                }, children: tabs.map((item, i) => ((0, jsx_runtime_1.jsxs)("span", { onMouseDown: () => setSelectedTab(i), 
+                }, children: tabs.map(function (item, i) { return ((0, jsx_runtime_1.jsxs)("span", { onMouseDown: function () { return setSelectedTab(i); }, 
                     //@ts-ignore
-                    style: spanStyle(selectedTab === i), children: [item, " ", i === 1 && (0, jsx_runtime_1.jsx)(exports.ValueRenderer, { text: State.index })] }))) }), (0, jsx_runtime_1.jsx)("div", { style: { display: selectedTab === 0 ? "block" : "none" }, children: (0, jsx_runtime_1.jsx)(exports.StateView, { state: State.state }) }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 1 ? "block" : "none" }, children: [State.setLogs.length > 0 && ((0, jsx_runtime_1.jsx)("div", { style: { textAlign: "right" }, children: (0, jsx_runtime_1.jsx)("span", { style: { textDecoration: "underline", cursor: "pointer" }, onClick: () => {
+                    style: spanStyle(selectedTab === i), children: [item, " ", i === 1 && (0, jsx_runtime_1.jsx)(exports.ValueRenderer, { text: State.index })] })); }) }), (0, jsx_runtime_1.jsx)("div", { style: { display: selectedTab === 0 ? "block" : "none" }, children: (0, jsx_runtime_1.jsx)(exports.StateView, { state: State.state }) }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 1 ? "block" : "none" }, children: [State.setLogs.length > 0 && ((0, jsx_runtime_1.jsx)("div", { style: { textAlign: "right" }, children: (0, jsx_runtime_1.jsx)("span", { style: { textDecoration: "underline", cursor: "pointer" }, onClick: function () {
                                 State.setLogs = [];
                                 State.index = 0;
                                 setCount(count + 1);
-                            }, children: (0, jsx_runtime_1.jsx)("i", { children: "Clear Logs" }) }) })), (_a = State.setLogs) === null || _a === void 0 ? void 0 : _a.map((log, index) => {
+                            }, children: (0, jsx_runtime_1.jsx)("i", { children: "Clear Logs" }) }) })), (_b = State.setLogs) === null || _b === void 0 ? void 0 : _b.map(function (log, index) {
+                        var _a;
                         return ((0, jsx_runtime_1.jsxs)("div", { style: {
                                 borderBottom: "1px solid #CCC",
                                 marginBottom: "5px",
@@ -428,8 +509,8 @@ const Switch = ({ State }) => {
                             }, children: [(0, jsx_runtime_1.jsx)("div", { style: {
                                         display: "inline-block",
                                         verticalAlign: "top",
-                                    }, children: (0, jsx_runtime_1.jsx)(exports.StateView, { autoOpenFirstLevel: false, state: {
-                                            [log.name]: {
+                                    }, children: (0, jsx_runtime_1.jsx)(exports.StateView, { autoOpenFirstLevel: false, state: (_a = {},
+                                            _a[log.name] = {
                                                 changes: log.changeList,
                                                 props: log.props,
                                                 "Triggered by": log.functionName,
@@ -438,7 +519,7 @@ const Switch = ({ State }) => {
                                                     ? "Error!" + log.errorMessage
                                                     : "Success",
                                             },
-                                        } || {} }) }), (0, jsx_runtime_1.jsx)("div", { style: {
+                                            _a) || {} }) }), (0, jsx_runtime_1.jsx)("div", { style: {
                                         position: "absolute",
                                         textAlign: "center",
                                         marginTop: "10px",
@@ -457,25 +538,26 @@ const Switch = ({ State }) => {
                                         height: "10px",
                                         background: log.errorOccured ? "red" : "green",
                                     } })] }, " set " + index + log.name));
-                    })] }), (0, jsx_runtime_1.jsx)("div", { style: { marginTop: "10px" } }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 2 ? "block" : "none" }, children: [(0, jsx_runtime_1.jsx)(exports.StateView, { state: ((_b = State.state) === null || _b === void 0 ? void 0 : _b.memos) || {}, autoOpenFirstLevel: true }), " "] }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 3 ? "block" : "none" }, children: [(0, jsx_runtime_1.jsx)(exports.StateView, { state: ((_c = State.state) === null || _c === void 0 ? void 0 : _c.events) || {}, autoOpenFirstLevel: true }), " "] })] }));
+                    })] }), (0, jsx_runtime_1.jsx)("div", { style: { marginTop: "10px" } }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 2 ? "block" : "none" }, children: [(0, jsx_runtime_1.jsx)(exports.StateView, { state: ((_c = State.state) === null || _c === void 0 ? void 0 : _c.memos) || {}, autoOpenFirstLevel: true }), " "] }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 3 ? "block" : "none" }, children: [(0, jsx_runtime_1.jsx)(exports.StateView, { state: ((_d = State.state) === null || _d === void 0 ? void 0 : _d.events) || {}, autoOpenFirstLevel: true }), " "] })] }));
 };
 exports.Switch = Switch;
 function XPlusWrapper(props) {
-    const { enableDevTools = true } = props;
-    return ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: props.children && props.children }), enableDevTools && ((0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)(exports.UseXDevTools, Object.assign({}, props)) }))] }));
+    var _a = props.enableDevTools, enableDevTools = _a === void 0 ? true : _a;
+    return ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: props.children && props.children }), enableDevTools && ((0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)(exports.UseXDevTools, __assign({}, props)) }))] }));
 }
 exports.XPlusWrapper = XPlusWrapper;
-const Treeview = ({ state, autoOpenFirstLevel = false }) => {
-    const [openList, setOpen] = (0, react_1.useState)([]);
-    (0, react_1.useEffect)(() => {
+var Treeview = function (_a) {
+    var state = _a.state, _b = _a.autoOpenFirstLevel, autoOpenFirstLevel = _b === void 0 ? false : _b;
+    var _c = (0, react_1.useState)([]), openList = _c[0], setOpen = _c[1];
+    (0, react_1.useEffect)(function () {
         setOpen(autoOpenFirstLevel && typeof state === "object" ? Object.keys(state) : []);
     }, []);
-    const toggleOpen = (key) => {
+    var toggleOpen = function (key) {
         if (openList.includes(key)) {
-            setOpen(openList.filter((item) => item !== key));
+            setOpen(openList.filter(function (item) { return item !== key; }));
         }
         else {
-            setOpen([...openList, key]);
+            setOpen(__spreadArray(__spreadArray([], openList, true), [key], false));
         }
     };
     return ((0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsxs)("div", { style: {
@@ -487,14 +569,14 @@ const Treeview = ({ state, autoOpenFirstLevel = false }) => {
                 transition: "height 0.3s ease",
                 color: "rgb(92 92 92)",
             }, children: [" ", Object.keys(state).length === 0 && ((0, jsx_runtime_1.jsxs)("i", { style: { color: "#999" }, children: [Array.isArray(state) ? "Array " : "Object ", " is Empty"] })), Object.keys(state)
-                    .filter((key) => typeof state[key] !== "function")
-                    .map((item) => {
+                    .filter(function (key) { return typeof state[key] !== "function"; })
+                    .map(function (item) {
                     return typeof state[item] === "object" && state[item] !== null ? ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsxs)("div", { className: "x-devtools-treview-header", style: {
                                     cursor: "pointer",
                                     marginTop: "003px",
                                     paddingBottom: "5px",
                                     paddingLeft: "4px",
-                                }, onMouseDown: () => toggleOpen(item), children: [" ", (0, jsx_runtime_1.jsxs)("b", { children: [(0, jsx_runtime_1.jsx)("span", { style: { display: "inline-block", paddingTop: "5px" }, children: (0, jsx_runtime_1.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", height: "13", viewBox: "0 -960 960 960", width: "24", style: {
+                                }, onMouseDown: function () { return toggleOpen(item); }, children: [" ", (0, jsx_runtime_1.jsxs)("b", { children: [(0, jsx_runtime_1.jsx)("span", { style: { display: "inline-block", paddingTop: "5px" }, children: (0, jsx_runtime_1.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", height: "13", viewBox: "0 -960 960 960", width: "24", style: {
                                                         transform: !openList.includes(item)
                                                             ? "rotate(-32deg)"
                                                             : "rotate(60deg)",
@@ -507,10 +589,11 @@ const Treeview = ({ state, autoOpenFirstLevel = false }) => {
                 })] }) }));
 };
 exports.Treeview = Treeview;
-const UseXDevTools = ({ XIconPosition = { bottom: "50px", right: "50px" }, enableConsoleLogging = false, hideXPlusIcon = false, disableToggleESCKey = false, }) => {
-    const [showTools, setShowTools] = (0, react_1.useState)(false);
-    const [count, setCount] = (0, react_1.useState)(0);
-    (0, react_1.useEffect)(() => {
+var UseXDevTools = function (_a) {
+    var _b = _a.XIconPosition, XIconPosition = _b === void 0 ? { bottom: "50px", right: "50px" } : _b, _c = _a.enableConsoleLogging, enableConsoleLogging = _c === void 0 ? false : _c, _d = _a.hideXPlusIcon, hideXPlusIcon = _d === void 0 ? false : _d, _e = _a.disableToggleESCKey, disableToggleESCKey = _e === void 0 ? false : _e;
+    var _f = (0, react_1.useState)(false), showTools = _f[0], setShowTools = _f[1];
+    var _g = (0, react_1.useState)(0), count = _g[0], setCount = _g[1];
+    (0, react_1.useEffect)(function () {
         function handleKeyPress(event) {
             if (event.key === "Escape") {
                 setShowTools(!showTools);
@@ -518,16 +601,16 @@ const UseXDevTools = ({ XIconPosition = { bottom: "50px", right: "50px" }, enabl
         }
         if (!disableToggleESCKey) {
             window.addEventListener("keydown", handleKeyPress);
-            return () => {
+            return function () {
                 window.removeEventListener("keydown", handleKeyPress);
             };
         }
     }, [showTools, setShowTools]);
-    (0, react_1.useEffect)(() => {
-        exports.listeners.onStateChange = () => {
-            setTimeout(() => setCount(count + 1), 50);
+    (0, react_1.useEffect)(function () {
+        exports.listeners.onStateChange = function () {
+            setTimeout(function () { return setCount(count + 1); }, 50);
         };
-        return () => {
+        return function () {
             exports.listeners.onStateChange = null;
         };
     }, [setCount, count]);
@@ -552,12 +635,12 @@ const UseXDevTools = ({ XIconPosition = { bottom: "50px", right: "50px" }, enabl
                                 background: "rgb(250, 250, 250)",
                                 borderLeft: "1px solid #CCC",
                                 padding: "10px",
-                            }, children: (0, jsx_runtime_1.jsx)("span", { style: { fontWeight: "bold", fontSize: "18px" }, children: "x-plus Dev Tools" }) }), (0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: Object.keys(exports.xRefs).map((key) => {
-                                const stateValue = exports.xRefs[key];
+                            }, children: (0, jsx_runtime_1.jsx)("span", { style: { fontWeight: "bold", fontSize: "18px" }, children: "x-plus Dev Tools" }) }), (0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: Object.keys(exports.xRefs).map(function (key) {
+                                var stateValue = exports.xRefs[key];
                                 return stateValue ? ((0, jsx_runtime_1.jsx)("div", { children: (0, jsx_runtime_1.jsx)(exports.Collapsable, { label: key, state: stateValue, children: (0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)(exports.Switch, { State: stateValue }) }) }) }, key)) : ((0, jsx_runtime_1.jsx)(jsx_runtime_1.Fragment, {}));
-                            }) }), Object.keys(exports.xRefs).length === 0 && ((0, jsx_runtime_1.jsxs)("div", { style: { textAlign: "center", marginTop: "10px" }, children: [" ", (0, jsx_runtime_1.jsx)("i", { children: "No States are created using useX" })] }))] }), !hideXPlusIcon && ((0, jsx_runtime_1.jsx)("div", { onMouseDown: () => {
+                            }) }), Object.keys(exports.xRefs).length === 0 && ((0, jsx_runtime_1.jsxs)("div", { style: { textAlign: "center", marginTop: "10px" }, children: [" ", (0, jsx_runtime_1.jsx)("i", { children: "No States are created using useX" })] }))] }), !hideXPlusIcon && ((0, jsx_runtime_1.jsx)("div", { onMouseDown: function () {
                         setShowTools(!showTools);
-                    }, id: "usex-devtools-holder", style: Object.assign({ zIndex: 1000000001, width: "50px", height: "50px", 
+                    }, id: "usex-devtools-holder", style: __assign({ zIndex: 1000000001, width: "50px", height: "50px", 
                         //background: "#E74C3C",
                         background: "green", borderRadius: "50px", position: "fixed", boxShadow: "0px 0px 10px 1px #CCC", cursor: "pointer" }, XIconPosition), children: (0, jsx_runtime_1.jsxs)("span", { style: {
                             left: "14px",
@@ -576,22 +659,23 @@ const UseXDevTools = ({ XIconPosition = { bottom: "50px", right: "50px" }, enabl
                                 }, children: "+" })] }) }))] }) }));
 };
 exports.UseXDevTools = UseXDevTools;
-const ValueRenderer = ({ text }) => {
-    const [highlighted, setHighlighted] = (0, react_1.useState)(false);
-    const [firstRender, setFirstRender] = (0, react_1.useState)(true);
-    (0, react_1.useEffect)(() => {
+var ValueRenderer = function (_a) {
+    var text = _a.text;
+    var _b = (0, react_1.useState)(false), highlighted = _b[0], setHighlighted = _b[1];
+    var _c = (0, react_1.useState)(true), firstRender = _c[0], setFirstRender = _c[1];
+    (0, react_1.useEffect)(function () {
         if (!firstRender) {
             setHighlighted(true);
-            const timer = setTimeout(() => {
+            var timer_1 = setTimeout(function () {
                 setHighlighted(false);
             }, 300);
-            return () => clearTimeout(timer);
+            return function () { return clearTimeout(timer_1); };
         }
         else {
             setFirstRender(false);
         }
     }, [text]);
-    const highlightStyle = highlighted
+    var highlightStyle = highlighted
         ? {
             backgroundColor: "rgba(0, 255, 0, 0.5)",
             transition: "background-color 0s",
@@ -600,65 +684,97 @@ const ValueRenderer = ({ text }) => {
             backgroundColor: "rgba(0, 255, 0, 0)",
             transition: "background-color 2s",
         };
-    return ((0, jsx_runtime_1.jsx)("span", { title: text + "", style: Object.assign(Object.assign({}, highlightStyle), { padding: "0px 5px", borderRadius: "4px" }), children: text === null ? ("null") : text === undefined ? ("undefined") : typeof text === "function" ? ((0, jsx_runtime_1.jsx)("b", { children: "Function" })) : text === "" ? ((0, jsx_runtime_1.jsx)("i", { children: "''" })) : typeof text === "string" ? (`'${text}'`) : ((text + "").slice(0, 100) + "" + ((text + "").length > 100 ? "..." : "")) }));
+    return ((0, jsx_runtime_1.jsx)("span", { title: text + "", style: __assign(__assign({}, highlightStyle), { padding: "0px 5px", borderRadius: "4px" }), children: text === null ? ("null") : text === undefined ? ("undefined") : typeof text === "function" ? ((0, jsx_runtime_1.jsx)("b", { children: "Function" })) : text === "" ? ((0, jsx_runtime_1.jsx)("i", { children: "''" })) : typeof text === "string" ? ("'".concat(text, "'")) : ((text + "").slice(0, 100) + "" + ((text + "").length > 100 ? "..." : "")) }));
 };
 exports.ValueRenderer = ValueRenderer;
 exports.XFetchConfig = {
     onBeforeFetch: undefined,
 };
-function xFetch(url = "/", method = "get", payload = null, qsObj = {}, headers = {}, signal = null) {
-    return __awaiter(this, void 0, void 0, function* () {
-        // Create query string from qsObj
-        const options = {
-            url,
-            method,
-            headers: Object.assign({ "Content-Type": "application/json" }, headers),
-            qsObj,
-            payload,
-        };
-        exports.XFetchConfig.onBeforeFetch && (yield exports.XFetchConfig.onBeforeFetch(options));
-        // if (payload) options.body = JSON.stringify(payload);
-        if (options.qsObj) {
-            const queryString = Object.keys(options.qsObj)
-                .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(options.qsObj[key])}`)
-                .join("&");
-            url += `?${queryString}`;
-        }
-        try {
-            const response = yield fetch(url, {
-                headers: options.headers || {},
-                body: options.payload ? JSON.stringify(options.payload) : undefined,
-                method: options.method,
-                signal,
-            });
-            const data = yield response.json();
-            if (response.ok) {
-                return data; // Resolve with the data if the API call is successful
+function xFetch(url, method, payload, qsObj, headers, signal) {
+    if (url === void 0) { url = "/"; }
+    if (method === void 0) { method = "get"; }
+    if (payload === void 0) { payload = null; }
+    if (qsObj === void 0) { qsObj = {}; }
+    if (headers === void 0) { headers = {}; }
+    if (signal === void 0) { signal = null; }
+    return __awaiter(this, void 0, void 0, function () {
+        var options, _a, queryString, response, data, error_1;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0:
+                    options = {
+                        url: url,
+                        method: method,
+                        headers: __assign({ "Content-Type": "application/json" }, headers),
+                        qsObj: qsObj,
+                        payload: payload,
+                    };
+                    _a = exports.XFetchConfig.onBeforeFetch;
+                    if (!_a) return [3 /*break*/, 2];
+                    return [4 /*yield*/, exports.XFetchConfig.onBeforeFetch(options)];
+                case 1:
+                    _a = (_b.sent());
+                    _b.label = 2;
+                case 2:
+                    _a;
+                    // if (payload) options.body = JSON.stringify(payload);
+                    if (options.qsObj) {
+                        queryString = Object.keys(options.qsObj)
+                            .map(function (key) {
+                            return "".concat(encodeURIComponent(key), "=").concat(encodeURIComponent(options.qsObj[key]));
+                        })
+                            .join("&");
+                        url += "?".concat(queryString);
+                    }
+                    _b.label = 3;
+                case 3:
+                    _b.trys.push([3, 6, , 7]);
+                    return [4 /*yield*/, fetch(url, {
+                            headers: options.headers || {},
+                            body: options.payload ? JSON.stringify(options.payload) : undefined,
+                            method: options.method,
+                            signal: signal,
+                        })];
+                case 4:
+                    response = _b.sent();
+                    return [4 /*yield*/, response.json()];
+                case 5:
+                    data = _b.sent();
+                    if (response.ok) {
+                        return [2 /*return*/, data]; // Resolve with the data if the API call is successful
+                    }
+                    else {
+                        throw new Error(data.message || "An error occurred while making the API call");
+                    }
+                    return [3 /*break*/, 7];
+                case 6:
+                    error_1 = _b.sent();
+                    throw error_1; // Reject with the error if there's an issue with the API call
+                case 7: return [2 /*return*/];
             }
-            else {
-                throw new Error(data.message || "An error occurred while making the API call");
-            }
-        }
-        catch (error) {
-            throw error; // Reject with the error if there's an issue with the API call
-        }
+        });
     });
 }
 exports.xFetch = xFetch;
-const useXFetch = (url = "/", qsObj = {}, method = "get", payload = null, headers = {}) => {
-    const [isLoading, setIsLoading] = (0, react_1.useState)(false);
-    const [error, setError] = (0, react_1.useState)(null);
-    const [data, setData] = (0, react_1.useState)(null);
-    const [status, setStatus] = (0, react_1.useState)("");
-    const [count, setCount] = (0, react_1.useState)(0);
-    const [loadSilently, setLoadSilently] = (0, react_1.useState)(false);
-    const [controller, setController] = (0, react_1.useState)(null);
-    const cancel = () => {
+var useXFetch = function (url, qsObj, method, payload, headers) {
+    if (url === void 0) { url = "/"; }
+    if (qsObj === void 0) { qsObj = {}; }
+    if (method === void 0) { method = "get"; }
+    if (payload === void 0) { payload = null; }
+    if (headers === void 0) { headers = {}; }
+    var _a = (0, react_1.useState)(false), isLoading = _a[0], setIsLoading = _a[1];
+    var _b = (0, react_1.useState)(null), error = _b[0], setError = _b[1];
+    var _c = (0, react_1.useState)(null), data = _c[0], setData = _c[1];
+    var _d = (0, react_1.useState)(""), status = _d[0], setStatus = _d[1];
+    var _e = (0, react_1.useState)(0), count = _e[0], setCount = _e[1];
+    var _f = (0, react_1.useState)(false), loadSilently = _f[0], setLoadSilently = _f[1];
+    var _g = (0, react_1.useState)(null), controller = _g[0], setController = _g[1];
+    var cancel = function () {
         if (controller && controller.abort())
             setStatus("cancelled");
         setController(null);
     };
-    (0, react_1.useEffect)(() => {
+    (0, react_1.useEffect)(function () {
         if (count > 0) {
             if (controller) {
                 cancel();
@@ -669,21 +785,21 @@ const useXFetch = (url = "/", qsObj = {}, method = "get", payload = null, header
                 setError(null);
                 setData(null);
                 setStatus("loading");
-                const controller = new AbortController();
-                setController(controller);
-                xFetch(url, method, payload, qsObj, headers, controller.signal)
-                    .then((data) => {
+                var controller_1 = new AbortController();
+                setController(controller_1);
+                xFetch(url, method, payload, qsObj, headers, controller_1.signal)
+                    .then(function (data) {
                     setData(data);
                     setStatus("success");
                     setError(null);
                 })
-                    .catch((error) => {
+                    .catch(function (error) {
                     if ((error === null || error === void 0 ? void 0 : error.name) !== "AbortError") {
                         setError(error);
                         setStatus("error");
                     }
                 })
-                    .finally(() => {
+                    .finally(function () {
                     setController(null);
                     setIsLoading(false);
                     setLoadSilently(false);
@@ -691,60 +807,77 @@ const useXFetch = (url = "/", qsObj = {}, method = "get", payload = null, header
             }
         }
     }, [count]);
-    (0, react_1.useEffect)(() => {
-        return () => {
+    (0, react_1.useEffect)(function () {
+        return function () {
             cancel();
         };
     }, []);
-    const call = () => {
+    var call = function () {
         setCount(count + 1);
     };
-    const callSilently = () => {
+    var callSilently = function () {
         setCount(count + 1);
         setLoadSilently(true);
     };
-    return { isLoading, data, error, status, call, cancel, callSilently };
+    return { isLoading: isLoading, data: data, error: error, status: status, call: call, cancel: cancel, callSilently: callSilently };
 };
 exports.useXFetch = useXFetch;
-const useXAsync = (asyncFunction) => {
-    const [isLoading, setIsLoading] = (0, react_1.useState)(false);
-    const [data, setData] = (0, react_1.useState)(null);
-    const [error, setError] = (0, react_1.useState)(null);
-    const [status, setStatus] = (0, react_1.useState)("idle");
-    const call = (...args) => __awaiter(void 0, void 0, void 0, function* () {
-        if (!isLoading) {
-            setIsLoading(true);
-            setStatus("loading");
-            setError(null);
-            try {
-                const result = yield asyncFunction(...args);
-                setData(result);
-                setError(null);
-                setStatus("success");
-            }
-            catch (err) {
-                if ((err === null || err === void 0 ? void 0 : err.name) !== "AbortError") {
-                    setError(err);
-                    setData(null);
-                    setStatus("error");
-                }
-            }
-            finally {
-                setIsLoading(false);
-            }
+var useXAsync = function (asyncFunction) {
+    var _a = (0, react_1.useState)(false), isLoading = _a[0], setIsLoading = _a[1];
+    var _b = (0, react_1.useState)(null), data = _b[0], setData = _b[1];
+    var _c = (0, react_1.useState)(null), error = _c[0], setError = _c[1];
+    var _d = (0, react_1.useState)("idle"), status = _d[0], setStatus = _d[1];
+    var call = function () {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
         }
-    });
+        return __awaiter(void 0, void 0, void 0, function () {
+            var result, err_1;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!!isLoading) return [3 /*break*/, 5];
+                        setIsLoading(true);
+                        setStatus("loading");
+                        setError(null);
+                        _a.label = 1;
+                    case 1:
+                        _a.trys.push([1, 3, 4, 5]);
+                        return [4 /*yield*/, asyncFunction.apply(void 0, args)];
+                    case 2:
+                        result = _a.sent();
+                        setData(result);
+                        setError(null);
+                        setStatus("success");
+                        return [3 /*break*/, 5];
+                    case 3:
+                        err_1 = _a.sent();
+                        if ((err_1 === null || err_1 === void 0 ? void 0 : err_1.name) !== "AbortError") {
+                            setError(err_1);
+                            setData(null);
+                            setStatus("error");
+                        }
+                        return [3 /*break*/, 5];
+                    case 4:
+                        setIsLoading(false);
+                        return [7 /*endfinally*/];
+                    case 5: return [2 /*return*/];
+                }
+            });
+        });
+    };
     return {
-        isLoading,
-        data,
-        error,
-        status,
-        call,
+        isLoading: isLoading,
+        data: data,
+        error: error,
+        status: status,
+        call: call,
     };
 };
 exports.useXAsync = useXAsync;
 function hasNonEmptyValue(obj) {
-    for (let key in obj) {
+    for (var key in obj) {
         if (obj[key] !== null && obj[key] !== undefined) {
             if (typeof obj[key] === "string" && obj[key].trim() !== "") {
                 return true;
@@ -758,14 +891,14 @@ function hasNonEmptyValue(obj) {
 }
 exports.hasNonEmptyValue = hasNonEmptyValue;
 function useXForm(Obj, validateForm) {
-    const [data, setD] = (0, react_1.useState)(Obj);
-    const [showValidations, setShowValidations] = (0, react_1.useState)(false);
-    const resetErrors = () => {
+    var _a = (0, react_1.useState)(Obj), data = _a[0], setD = _a[1];
+    var _b = (0, react_1.useState)(false), showValidations = _b[0], setShowValidations = _b[1];
+    var resetErrors = function () {
         return resetPrimitiveValues(deepClone(data));
     };
-    const [errors, setE] = (0, react_1.useState)(resetErrors());
-    const [count, setCount] = (0, react_1.useState)(0);
-    const setData = (fn) => {
+    var _c = (0, react_1.useState)(resetErrors()), errors = _c[0], setE = _c[1];
+    var _d = (0, react_1.useState)(0), count = _d[0], setCount = _d[1];
+    var setData = function (fn) {
         typeof fn === "function" && fn();
         resetErrors();
         showValidations && validateForm(data, errors);
@@ -776,25 +909,26 @@ function useXForm(Obj, validateForm) {
         }
         setCount(count + 1);
         //@ts-ignore
-        setD(Array.isArray(data) ? [...data] : Object.assign({}, data));
+        setD(Array.isArray(data) ? __spreadArray([], data, true) : __assign({}, data));
     };
-    const setErrors = (fn) => {
+    var setErrors = function (fn) {
         typeof fn === "function" && fn();
         setCount(count + 1);
         setE(errors);
     };
     return {
-        data,
-        errors,
-        resetForm: (resetWith = Obj) => {
+        data: data,
+        errors: errors,
+        resetForm: function (resetWith) {
+            if (resetWith === void 0) { resetWith = Obj; }
             setD(resetWith);
-            setTimeout(() => resetErrors(), 100);
+            setTimeout(function () { return resetErrors(); }, 100);
         },
-        setData,
+        setData: setData,
         // showErrors: showValidations,
         // setShowErros: setShowValidations,
-        setErrors,
-        validate: () => {
+        setErrors: setErrors,
+        validate: function () {
             validateForm(data, errors);
             setShowValidations(true);
             setCount(count + 1);
@@ -805,7 +939,7 @@ function useXForm(Obj, validateForm) {
                 return true;
             }
         },
-        resetErrors,
+        resetErrors: resetErrors,
     };
 }
 exports.useXForm = useXForm;
@@ -815,7 +949,7 @@ function resetPrimitiveValues(obj) {
         return "";
     }
     // Recursive case: obj is an object, so we iterate over its properties
-    for (let key in obj) {
+    for (var key in obj) {
         if (obj.hasOwnProperty(key)) {
             // Reset primitive values to an empty string
             if (typeof obj[key] !== "object" || obj[key] === null) {
@@ -831,25 +965,29 @@ function resetPrimitiveValues(obj) {
 }
 // quick state
 function useQ(val) {
-    const setState = (val) => {
+    var setState = function (val) {
         if (typeof val === "function") {
             val();
-            set(Object.assign({}, state));
+            set(__assign({}, state));
         }
         else {
-            set(Object.assign(Object.assign({}, state), { val }));
+            set(__assign(__assign({}, state), { val: val }));
         }
     };
-    const [state, set] = (0, react_1.useState)({
-        val,
+    var _a = (0, react_1.useState)({
+        val: val,
         set: setState,
-    });
+    }), state = _a[0], set = _a[1];
     state.set = setState;
     return state;
 }
 exports.useQ = useQ;
-function XEvents(...eventNames) {
-    const events = eventNames.reduce((a, b) => {
+function XEvents() {
+    var eventNames = [];
+    for (var _i = 0; _i < arguments.length; _i++) {
+        eventNames[_i] = arguments[_i];
+    }
+    var events = eventNames.reduce(function (a, b) {
         // let temp = {
         //   name: b,
         //   trigger() {
@@ -898,52 +1036,56 @@ exports.XEvents = XEvents;
 //     eventsArray.map((event) => event.count)
 //   );
 // };
-function usePagination(initialPage = 1, initialTotalPages = -1, initialItemsPerPage = 10) {
-    const [currentPage, setPage] = (0, react_1.useState)(initialPage);
-    const [totalPages, setTotalPages] = (0, react_1.useState)(initialTotalPages);
-    const [itemsPerPage, setItemsPerPage] = (0, react_1.useState)(initialItemsPerPage);
-    const next = () => {
-        setPage((prevPage) => prevPage + 1);
+function usePagination(initialPage, initialTotalPages, initialItemsPerPage) {
+    if (initialPage === void 0) { initialPage = 1; }
+    if (initialTotalPages === void 0) { initialTotalPages = -1; }
+    if (initialItemsPerPage === void 0) { initialItemsPerPage = 10; }
+    var _a = (0, react_1.useState)(initialPage), currentPage = _a[0], setPage = _a[1];
+    var _b = (0, react_1.useState)(initialTotalPages), totalPages = _b[0], setTotalPages = _b[1];
+    var _c = (0, react_1.useState)(initialItemsPerPage), itemsPerPage = _c[0], setItemsPerPage = _c[1];
+    var next = function () {
+        setPage(function (prevPage) { return prevPage + 1; });
     };
-    const prev = () => {
-        setPage((prevPage) => Math.max(prevPage - 1, 1));
+    var prev = function () {
+        setPage(function (prevPage) { return Math.max(prevPage - 1, 1); });
     };
-    const resetPage = () => {
+    var resetPage = function () {
         setPage(1);
         setTotalPages(-1);
     };
     return {
-        currentPage,
-        setPage,
-        next,
-        prev,
-        setTotalPages,
-        itemsPerPage,
-        totalPages,
-        setItemsPerPage,
-        resetPage,
+        currentPage: currentPage,
+        setPage: setPage,
+        next: next,
+        prev: prev,
+        setTotalPages: setTotalPages,
+        itemsPerPage: itemsPerPage,
+        totalPages: totalPages,
+        setItemsPerPage: setItemsPerPage,
+        resetPage: resetPage,
     };
 }
 exports.usePagination = usePagination;
-function hasScrollReachedTheEnd(event, reverse = false) {
+function hasScrollReachedTheEnd(event, reverse) {
+    if (reverse === void 0) { reverse = false; }
     if (event.target === document) {
         // Document scroll
-        const windowHeight = window.innerHeight;
-        const scrollY = window.scrollY;
-        const documentHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
+        var windowHeight = window.innerHeight;
+        var scrollY_1 = window.scrollY;
+        var documentHeight = Math.max(document.body.scrollHeight, document.documentElement.scrollHeight);
         if (reverse) {
-            return scrollY === 0;
+            return scrollY_1 === 0;
         }
         else {
-            return scrollY + windowHeight >= documentHeight;
+            return scrollY_1 + windowHeight >= documentHeight;
         }
     }
     else if (event.target instanceof HTMLElement) {
         // Element scroll
-        const element = event.target;
-        const scrollTop = element.scrollTop;
-        const scrollHeight = element.scrollHeight;
-        const clientHeight = element.clientHeight;
+        var element = event.target;
+        var scrollTop = element.scrollTop;
+        var scrollHeight = element.scrollHeight;
+        var clientHeight = element.clientHeight;
         if (reverse) {
             return scrollTop === 0;
         }
@@ -953,9 +1095,9 @@ function hasScrollReachedTheEnd(event, reverse = false) {
     }
     else {
         // Window scroll
-        const scrollHeight = document.documentElement.scrollHeight;
-        const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
-        const clientHeight = window.innerHeight;
+        var scrollHeight = document.documentElement.scrollHeight;
+        var scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+        var clientHeight = window.innerHeight;
         if (reverse) {
             return scrollTop === 0;
         }
@@ -966,8 +1108,8 @@ function hasScrollReachedTheEnd(event, reverse = false) {
 }
 exports.hasScrollReachedTheEnd = hasScrollReachedTheEnd;
 function paginateArray(array, currentPage, itemsPerPage) {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
+    var startIndex = (currentPage - 1) * itemsPerPage;
+    var endIndex = startIndex + itemsPerPage;
     return array.slice(startIndex, endIndex);
 }
 exports.paginateArray = paginateArray;
@@ -976,9 +1118,9 @@ function deepClone(obj) {
         return obj;
     }
     if (Array.isArray(obj)) {
-        return obj.map((item) => deepClone(item));
+        return obj.map(function (item) { return deepClone(item); });
     }
-    return Object.keys(obj).reduce((acc, key) => {
+    return Object.keys(obj).reduce(function (acc, key) {
         acc[key] = deepClone(obj[key]);
         return acc;
     }, {});
