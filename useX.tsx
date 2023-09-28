@@ -1,11 +1,4 @@
-import {
-  Component,
-  ReactNode,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Component, ReactNode, useEffect, useState } from "react";
 import "./App.css";
 export const xRefs: any = {};
 export const xConfig = {
@@ -22,6 +15,11 @@ export function getParentState<T>(CL: new () => T): {
 } {
   //
   const item = xRefs[CL.name];
+  if (!item) {
+    throw Error(
+      "Error Occured in getParentState. The requested state is not created by any of the parent components."
+    );
+  }
   return { state: item.state, set: item.renderer };
 }
 // let tempCallStack: any = [];
