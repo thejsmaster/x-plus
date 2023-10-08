@@ -1,11 +1,4 @@
-import {
-  Component,
-  ReactNode,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useState,
-} from "react";
+import { Component, ReactNode, useEffect, useState } from "react";
 import "./App.css";
 export const xRefs: any = {};
 export const xConfig = {
@@ -19,11 +12,6 @@ export const listeners: any = {
 export function getParentState<T>(CL: new () => T): {
   state: T;
   set: Function;
-  plus: Function;
-  onPlus: Function;
-  saveCopy: Function;
-  resetState: Function;
-  stateChanged: number;
 } {
   //
   const item = xRefs[CL.name];
@@ -32,17 +20,8 @@ export function getParentState<T>(CL: new () => T): {
       "Error Occured in getParentState. The requested state is not created by any of the parent components."
     );
   }
-  return {
-    state: item.state,
-    set: item.renderer,
-    plus: item.actionRenderer,
-    onPlus: item.onPlus,
-    saveCopy: item.saveCopy,
-    resetState: item.resetState,
-    stateChanged: item.count,
-  };
+  return { state: item.state, set: item.renderer };
 }
-export const getX = getParentState;
 // let tempCallStack: any = [];
 // function call(fn: any, state: any) {
 //   if (tempCallStack.indexOf(fn) === -1) {
@@ -113,34 +92,7 @@ export function findDiff(obj1: any, obj2: any, path = ""): Record<string, any> {
 
 //   return inputString;
 // }
-function getRandomString() {
-  const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
 
-  for (let i = 0; i < 9; i++) {
-    const randomIndex = Math.floor(Math.random() * characters.length);
-    result += characters.charAt(randomIndex);
-  }
-
-  return result;
-}
-const mountRefsCount: any = {};
-const codes: any = {};
-// export function X<T extends Object>(
-//   CL: new () => T,
-//   label?: any
-// ): {
-//   state: T;
-//   set: Function;
-//   stateChanged: number;
-//   onPlus: Function;
-//   plus: Function;
-//   saveCopy: Function;
-//   resetState: Function;
-// } {
-//   return useX(CL, label);
-// }
 export function useX<T extends Object>(
   CL: new () => T,
   label?: any
@@ -152,6 +104,7 @@ export function useX<T extends Object>(
   plus: Function;
   saveCopy: Function;
   resetState: Function;
+  // trigger: (fn: Function) => any;
 } {
   const [count, setCount] = useState(0);
 
@@ -178,7 +131,6 @@ export function useX<T extends Object>(
       intiate();
     }
     xRefs[label].renderer = (fn: Function, ...props: any) => {
-      const timeStart = Date.now();
       const copy = deepClone(xRefs[label].state);
       let errorOccured = false;
       let errorMessage = "";
@@ -195,9 +147,14 @@ export function useX<T extends Object>(
         errorMessage = e?.message;
       }
 
+      if (typeof fn !== "function") {
+        throw new Error("set is called and no action is passed");
+      }
       let { fileName, functionName, lineNumber }: any = getCallStack();
       let fname = fileName.split("/")[fileName.split("/").length - 1];
       const updateSet = () => {
+        console.time();
+
         let changeList: any = {};
         if (copy) {
           changeList = findDiff(copy, xRefs[label].state);
@@ -221,7 +178,7 @@ export function useX<T extends Object>(
         if (xConfig.enableDebugging) {
           const log = {
             fileName: fname.split("?")[0],
-            functionName: functionName || "Set",
+            functionName,
             lineNumber,
             changeList,
             props,
@@ -229,7 +186,6 @@ export function useX<T extends Object>(
             name: fn.name || "",
             errorOccured,
             errorMessage,
-            duration: Date.now() - timeStart + " ms",
           };
           xConfig.enableConsoleLogging &&
             console.log("useX - " + log.name, log);
@@ -249,7 +205,6 @@ export function useX<T extends Object>(
       listeners?.onStateChange && listeners.onStateChange();
     };
     xRefs[label].actionRenderer = (fn: Function, ...props: any) => {
-      const timeStart = Date.now();
       let copy = {};
       if (xConfig.enableDebugging) {
         copy = deepClone(xRefs[label].state);
@@ -269,9 +224,9 @@ export function useX<T extends Object>(
         errorMessage = e?.message;
       }
 
-      // if (typeof fn !== "function") {
-      //   throw new Error("set is called and no action is passed");
-      // }
+      if (typeof fn !== "function") {
+        throw new Error("set is called and no action is passed");
+      }
       let { fileName, functionName, lineNumber }: any = getCallStack();
       let fname = fileName.split("/")[fileName.split("/").length - 1];
       const updateSet = () => {
@@ -288,7 +243,7 @@ export function useX<T extends Object>(
 
         const log = {
           fileName: fname.split("?")[0],
-          functionName: functionName || "Plus",
+          functionName,
           lineNumber,
           changeList,
           props,
@@ -296,7 +251,6 @@ export function useX<T extends Object>(
           name: fn.name || "",
           errorOccured,
           errorMessage,
-          duration: Date.now() - timeStart + " ms",
         };
         xConfig.enableConsoleLogging && console.log("useX - " + log.name, log);
         xConfig.enableConsoleLogging &&
@@ -311,52 +265,42 @@ export function useX<T extends Object>(
       setCount(count + 1);
       listeners?.onStateChange && listeners.onStateChange();
     };
-    xRefs[label].onPlus = (fn: Function) => {
+  };
+  setAgain();
+  useEffect(() => {
+    setAgain();
+
+    return () => {
+      delete xRefs[label];
+      listeners?.onStateChange && listeners.onStateChange();
+    };
+  }, []);
+
+  return {
+    state: xRefs[label].state,
+    set: xRefs[label].renderer,
+    stateChanged: count,
+    plus: xRefs[label].actionRenderer,
+    onPlus: (fn: Function) => {
       if (typeof fn === "function") xRefs[label].onPlus = fn;
-    };
-    xRefs[label].saveCopy = () => {
+    },
+    saveCopy() {
       xRefs[label].copy = deepClone(xRefs[label].state);
-    };
-    xRefs[label].resetState = () => {
+    },
+    resetState() {
       xRefs[label].renderer(function reset() {
         xRefs[label].state = {
           ...destructureWithProto(xRefs[label].state),
           ...xRefs[label].copy,
         };
       });
-    };
-    xRefs[label].stateChanged = count;
-  };
-  setAgain();
-  useLayoutEffect(() => {
-    if (mountRefsCount[label]) {
-      throw Error(
-        "Don't intialise useX " +
-          label +
-          " again!. use 'getParentState(" +
-          label +
-          ")' to get the instance of already created useX instance of " +
-          label
-      );
-    } else {
-      mountRefsCount[label] = 1;
-    }
-    return () => {
-      delete xRefs[label];
-      delete mountRefsCount[label];
-      listeners?.onStateChange && listeners.onStateChange();
-    };
-  }, []);
-
-  //
-  return {
-    state: xRefs[label].state,
-    set: xRefs[label].renderer,
-    stateChanged: count,
-    plus: xRefs[label].actionRenderer,
-    onPlus: xRefs[label].onPlus,
-    saveCopy: xRefs[label].saveCopy,
-    resetState: xRefs[label].resetState,
+    },
+    // trigger(fn: Function) {
+    //   if (typeof fn === "function") {
+    //     setCount(count + 1);
+    //     return fn();
+    //   }
+    // },
   };
 }
 
@@ -527,26 +471,26 @@ export const LabelRenderer = ({ label }: any) => {
       {label.endsWith("[M]") ? (
         <span title={"Modified"} style={{ color: "#bc7a00" }}>
           {/* <span
-              style={{ color: "#bc7a00", fontSize: "large", fontWeight: "bold" }}
-            >
-              *
-            </span>{" "} */}
+            style={{ color: "#bc7a00", fontSize: "large", fontWeight: "bold" }}
+          >
+            *
+          </span>{" "} */}
           {label.substr(0, label.length - 3)}{" "}
         </span>
       ) : label.endsWith("[A]") ? (
         <span title={"Added"} style={{ color: "green" }}>
           {/* <span
-              style={{ color: "green", fontSize: "large", fontWeight: "bold" }}
-            >
-              +
-            </span> */}
+            style={{ color: "green", fontSize: "large", fontWeight: "bold" }}
+          >
+            +
+          </span> */}
           {label.substr(0, label.length - 3)}{" "}
         </span>
       ) : label.endsWith("[D]") ? (
         <span title={"Deleted"} style={{ color: "#df0000" }}>
           {/* <span style={{ color: "red", fontSize: "large", fontWeight: "bold" }}>
-              -
-            </span> */}
+            -
+          </span> */}
           {label.substr(0, label.length - 3)}{" "}
         </span>
       ) : (
@@ -669,9 +613,6 @@ export const Switch = ({ State }: any) => {
                     } || {}
                   }
                 />
-              </div>
-              <div style={{ position: "absolute", top: "6px", right: "50px" }}>
-                {log.duration}
               </div>
               <div
                 style={{
@@ -975,44 +916,44 @@ export const UseXDevTools = ({
             }}
           >
             {/* <span
-                className={"usex-devtools-dots"}
-                style={{
-                  borderRadius: "5px",
-                  border: "1px solid white",
-                  background: "white",
-                  width: "5px",
-                  height: "5px",
-                  left: "21.5px",
-                  top: "10px",
-                  position: "absolute",
-                }}
-              ></span>
-              <span
-                className={"usex-devtools-dots"}
-                style={{
-                  borderRadius: "5px",
-                  border: "1px solid white",
-                  background: "white",
-                  width: "5px",
-                  height: "5px",
-                  left: "12px",
-                  top: "30px",
-                  position: "absolute",
-                }}
-              ></span>
-              <span
-                className={"usex-devtools-dots"}
-                style={{
-                  borderRadius: "5px",
-                  border: "1px solid white",
-                  background: "white",
-                  width: "5px",
-                  height: "5px",
-                  left: "32px",
-                  top: "30px",
-                  position: "absolute",
-                }}
-              ></span> */}
+              className={"usex-devtools-dots"}
+              style={{
+                borderRadius: "5px",
+                border: "1px solid white",
+                background: "white",
+                width: "5px",
+                height: "5px",
+                left: "21.5px",
+                top: "10px",
+                position: "absolute",
+              }}
+            ></span>
+            <span
+              className={"usex-devtools-dots"}
+              style={{
+                borderRadius: "5px",
+                border: "1px solid white",
+                background: "white",
+                width: "5px",
+                height: "5px",
+                left: "12px",
+                top: "30px",
+                position: "absolute",
+              }}
+            ></span>
+            <span
+              className={"usex-devtools-dots"}
+              style={{
+                borderRadius: "5px",
+                border: "1px solid white",
+                background: "white",
+                width: "5px",
+                height: "5px",
+                left: "32px",
+                top: "30px",
+                position: "absolute",
+              }}
+            ></span> */}
             <span
               style={{
                 left: "14px",
@@ -1039,21 +980,21 @@ export const UseXDevTools = ({
               </span>
             </span>
             {/* //   style={{
-            //     zIndex: 1000000001,
-            //     width: "50px",
-            //     height: "50px",
-            //     background: "rgb(2 137 101)",
-            //     borderRadius: "50px",
-            //     position: "fixed",
-  
-            //     userSelect: "none",
-            //     boxShadow: "0px 0px 10px 1px #CCC",
-            //     cursor: "pointer",
-            //     ...XIconPosition,
-            //   }}
-            // >
-           
-            // </div> */}
+          //     zIndex: 1000000001,
+          //     width: "50px",
+          //     height: "50px",
+          //     background: "rgb(2 137 101)",
+          //     borderRadius: "50px",
+          //     position: "fixed",
+
+          //     userSelect: "none",
+          //     boxShadow: "0px 0px 10px 1px #CCC",
+          //     cursor: "pointer",
+          //     ...XIconPosition,
+          //   }}
+          // >
+         
+          // </div> */}
           </div>
         )}
       </div>
@@ -1619,245 +1560,3 @@ export function deepClone(obj: any): any {
   }, {});
 }
 
-interface UseList<T> {
-  addItem: (item: T, index?: number) => void;
-  updateItem: (item: T, index?: number) => void;
-  removeItem: (index: number) => void;
-  list: T[];
-}
-
-export function useArray<T>(initialList: T[] = []): UseList<T> {
-  const [list, setList] = useState<T[]>(initialList);
-
-  // Function to add an item to the list at a specific index or at the end if no index is provided
-  const updateItem = (item: T, index: number = list.length) => {
-    if (index < 0 || index > list.length) {
-      throw new Error("Invalid index");
-    }
-
-    const updatedList = [...list];
-    updatedList.splice(index, 0, item);
-    setList(updatedList);
-  };
-
-  // Function to remove an item from the list at a specific index
-  const removeItem = (index: number) => {
-    if (index < 0 || index >= list.length) {
-      throw new Error("Invalid index");
-    }
-
-    const updatedList = [...list];
-    updatedList.splice(index, 1);
-    setList(updatedList);
-  };
-
-  return {
-    addItem: updateItem,
-    updateItem,
-    removeItem,
-    list: [...list], // Return a copy of the list to ensure immutability
-  };
-}
-
-export function useString(initialValue = "") {
-  const [val, setVal] = useState(initialValue);
-
-  const isEmpty = () => {
-    return val !== "" && val !== null && val !== undefined;
-  };
-
-  const isNull = () => {
-    return val === null;
-  };
-
-  const isUndefined = () => {
-    return val === undefined;
-  };
-
-  const toInt = () => {
-    return parseInt(val);
-  };
-
-  const toFloat = (precision = 2) => {
-    return parseFloat(val).toFixed(precision);
-  };
-
-  const toIntOrZero = () => {
-    return isNaN(parseInt(val)) ? 0 : parseInt(val);
-  };
-
-  const toFloatOrZero = (precision = 2) => {
-    return isNaN(parseFloat(val))
-      ? parseFloat("0").toFixed(precision)
-      : parseFloat(val).toFixed(precision);
-  };
-
-  return {
-    val,
-    setVal,
-    isEmpty,
-    isNull,
-    isUndefined,
-    toInt,
-    toFloat,
-    isNaN,
-    toIntOrZero,
-    toFloatOrZero,
-  };
-}
-
-export function useFloat(initialValue = 0, precision = 2) {
-  const [val, setValInternal] = useState(
-    parseFloat(initialValue.toString()).toFixed(precision)
-  );
-
-  const setVal = (newValue: any) => {
-    const parsedValue = parseFloat(newValue);
-    if (isNaN(parsedValue)) {
-      setValInternal(parseFloat("0").toFixed(precision));
-    } else {
-      setValInternal(parsedValue.toFixed(precision));
-    }
-  };
-
-  const sum = useCallback(
-    (value: any) => {
-      setVal((parseFloat(val) + parseFloat(value)).toFixed(precision));
-    },
-    [val, precision]
-  );
-
-  const subtract = useCallback(
-    (value: any) => {
-      setVal((parseFloat(val) - parseFloat(value)).toFixed(precision));
-    },
-    [val, precision]
-  );
-
-  const multiply = useCallback(
-    (value: any) => {
-      setVal((parseFloat(val) * parseFloat(value)).toFixed(precision));
-    },
-    [val, precision]
-  );
-
-  const divide = useCallback(
-    (value: any) => {
-      if (parseFloat(value) === 0) {
-        setVal(parseFloat("0").toFixed(precision));
-      } else {
-        setVal((parseFloat(val) / parseFloat(value)).toFixed(precision));
-      }
-    },
-    [val, precision]
-  );
-
-  const toInt = () => {
-    return parseInt(val);
-  };
-
-  const toIntFloor = () => {
-    return Math.floor(parseFloat(val));
-  };
-
-  const toIntCeil = () => {
-    return Math.ceil(parseFloat(val));
-  };
-
-  const toIntRound = () => {
-    return Math.round(parseFloat(val));
-  };
-
-  return {
-    val,
-    sum,
-    subtract,
-    multiply,
-    divide,
-    setVal,
-    toInt,
-    toIntFloor,
-    toIntCeil,
-    toIntRound,
-  };
-}
-
-export function xInt(num: number) {
-  return {
-    sum: (other: number) => num + other,
-    subtract: (other: number) => num - other,
-    multiply: (other: number) => num * other,
-  };
-}
-
-export function xFloat(num: number, precision = 2) {
-  const roundedNum = parseFloat(num.toFixed(precision));
-  return {
-    sum: (other: number) => {
-      const result = roundedNum + other;
-      return parseFloat(result.toFixed(precision));
-    },
-    subtract: (other: number) => {
-      const result = roundedNum - other;
-      return parseFloat(result.toFixed(precision));
-    },
-    multiply: (other: number) => {
-      const result = roundedNum * other;
-      return parseFloat(result.toFixed(precision));
-    },
-  };
-}
-
-interface UseObject<T> {
-  setItem: (key: string, value: T) => void;
-  getItem: (key: string) => T | undefined;
-  removeItem: (key: string) => void;
-  hasKey: (key: string) => boolean;
-  // hasValue: (value: T) => boolean;
-  object: Record<string, T>;
-  keys: string[];
-}
-
-export function useObject<T>(
-  initialObject: Record<string, T> = {}
-): UseObject<T> {
-  const [object, setObject] = useState(initialObject);
-
-  const setItem = (key: string, value: T) => {
-    setObject((prevObject) => ({ ...prevObject, [key]: value }));
-  };
-
-  const getItem = (key: string) => {
-    return object[key];
-  };
-
-  const removeItem = (key: string) => {
-    setObject((prevObject) => {
-      const updatedObject = { ...prevObject };
-      delete updatedObject[key];
-      return updatedObject;
-    });
-  };
-
-  const hasKey = (key: string) => {
-    return key in object;
-  };
-
-  // const hasValue = (value: T) => {
-  //   return Object.values(object).includes(value);
-  // };
-
-  const keys = Object.keys(object);
-
-  return {
-    setItem,
-    getItem,
-    removeItem,
-    hasKey,
-    // hasValue,
-    object,
-    keys,
-  };
-}
-
-export default useObject;

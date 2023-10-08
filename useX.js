@@ -87,6 +87,9 @@ exports.listeners = {
 function getParentState(CL) {
     //
     var item = exports.xRefs[CL.name];
+    if (!item) {
+        throw Error("Error Occured in getParentState. The requested state is not created by any of the parent components.");
+    }
     return { state: item.state, set: item.renderer };
 }
 exports.getParentState = getParentState;
