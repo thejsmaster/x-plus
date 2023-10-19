@@ -71,7 +71,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deepClone = exports.paginateArray = exports.hasScrollReachedTheEnd = exports.usePagination = exports.XEvents = exports.useQ = exports.useXForm = exports.hasNonEmptyValue = exports.useXAsync = exports.useXFetch = exports.xFetch = exports.XFetchConfig = exports.ValueRenderer = exports.UseXDevTools = exports.Treeview = exports.XPlusWrapper = exports.Switch = exports.StateView = exports.LabelRenderer = exports.ErrorBoundary = exports.ErrorComponent = exports.Collapsable = exports.useX = exports.findDiff = exports.getCallStack = exports.getParentState = exports.listeners = exports.xConfig = exports.xRefs = void 0;
+exports.useObject = exports.xFloat = exports.xInt = exports.useFloat = exports.useString = exports.useArray = exports.deepClone = exports.paginateArray = exports.hasScrollReachedTheEnd = exports.usePagination = exports.xEvents = exports.useQ = exports.useXForm = exports.hasNonEmptyValue = exports.useXAsync = exports.useXFetch = exports.xFetch = exports.XFetchConfig = exports.ValueRenderer = exports.UseXDevTools = exports.Treeview = exports.XPlusWrapper = exports.Switch = exports.StateView = exports.LabelRenderer = exports.ErrorBoundary = exports.ErrorComponent = exports.Collapsable = exports.setStateX = exports.buildActions = exports.useX = exports.useXOnAction = exports.findDiff = exports.getCallStack = exports.getListenerCount = exports.useXChannel = exports.postMessage = exports.x = exports.getX = exports.getParentState = exports.xConfig = exports.xRefs = void 0;
 var jsx_runtime_1 = require("react/jsx-runtime");
 var react_1 = require("react");
 require("./App.css");
@@ -81,28 +81,79 @@ exports.xConfig = {
     enableConsoleLogging: false,
     autoDestructureState: false,
 };
-exports.listeners = {
+var listeners = {
     onStateChange: null,
 };
 function getParentState(CL) {
     //
-    var item = exports.xRefs[CL.name];
+    var label = CL.name;
+    var item = exports.xRefs[label];
     if (!item) {
         throw Error("Error Occured in getParentState. The requested state is not created by any of the parent components.");
     }
-    return { state: item.state, set: item.renderer };
+    return {
+        state: item.state,
+        set: item.set,
+        plus: item.set,
+        // onPlus: item.onPlus,
+        stateChanged: item.count,
+        actions: item.actions,
+        dispatch: item.set,
+        triggerEvent: item.triggerEvent,
+        xlog: item.log,
+        setX: item.setX,
+    };
 }
 exports.getParentState = getParentState;
-// let tempCallStack: any = [];
-// function call(fn: any, state: any) {
-//   if (tempCallStack.indexOf(fn) === -1) {
-//     tempCallStack.push(fn);
-//     setTimeout(() => {
-//       fn.call(state);
-//       tempCallStack = tempCallStack.filter((item: any) => item !== fn);
-//     }, 0);
-//   }
-// }
+exports.getX = getParentState;
+exports.x = getParentState;
+var channels = {};
+var postMessage = function (channelName) {
+    var props = [];
+    for (var _i = 1; _i < arguments.length; _i++) {
+        props[_i - 1] = arguments[_i];
+    }
+    var channelCallbacks = channels[channelName] || [];
+    channelCallbacks.forEach(function (cb) {
+        cb.apply(void 0, props);
+    });
+};
+exports.postMessage = postMessage;
+var useXChannel = function (channelName, callback) {
+    if (!channels[channelName]) {
+        channels[channelName] = [];
+    }
+    var post = function () {
+        var props = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            props[_i] = arguments[_i];
+        }
+        var channelCallbacks = channels[channelName] || [];
+        channelCallbacks.forEach(function (cb) {
+            cb !== callback && cb.apply(void 0, props);
+        });
+    };
+    (0, react_1.useEffect)(function () {
+        if (callback) {
+            channels[channelName].push(callback);
+        }
+        return function () {
+            if (callback) {
+                var index = channels[channelName].indexOf(callback);
+                if (index !== -1) {
+                    channels[channelName].splice(index, 1);
+                }
+            }
+        };
+    }, [channelName, callback]);
+    return post;
+};
+exports.useXChannel = useXChannel;
+var getListenerCount = function (ChannelName) {
+    var _a;
+    return ((_a = channels[ChannelName]) === null || _a === void 0 ? void 0 : _a.length) || 0;
+};
+exports.getListenerCount = getListenerCount;
 function getCallStack(splitIndex) {
     var _a, _b, _c, _d, _e, _f, _g, _h;
     if (splitIndex === void 0) { splitIndex = 3; }
@@ -136,7 +187,7 @@ function findDiff(obj1, obj2, path) {
                 Object.assign(changes, nestedChanges);
             }
             else {
-                changes["".concat(newPath, " [D]")] = undefined;
+                changes["".concat(newPath, " [D]")] = "deleted";
             }
         }
         for (var key in obj2) {
@@ -152,49 +203,58 @@ function findDiff(obj1, obj2, path) {
     return changes;
 }
 exports.findDiff = findDiff;
-// export let actions: any = [];
-// called actions
-// function extractSubstring(inputString: string) {
-//   const lastIndex = inputString.lastIndexOf(" [");
-//   if (lastIndex !== -1) {
-//     return inputString.slice(0, lastIndex);
-//   }
-//   return inputString;
-// }
-function useX(CL, label) {
+var mountRefsCount = {};
+function useXOnAction(fnCallback, actions) {
+    (0, exports.useXChannel)("useX", function (type) {
+        if (actions.includes(type)) {
+            fnCallback();
+        }
+    });
+}
+exports.useXOnAction = useXOnAction;
+function useX(CL) {
     var _a = (0, react_1.useState)(0), count = _a[0], setCount = _a[1];
-    if (!label) {
-        label = CL.name;
-    }
+    (0, react_1.useEffect)(function () {
+        if (count > 0) {
+            setTimeout(function () {
+                (listeners === null || listeners === void 0 ? void 0 : listeners.onStateChange) && listeners.onStateChange();
+            }, 200);
+        }
+    }, [count]);
+    var label = CL.name;
     var intiate = function () {
         if (!exports.xRefs[label]) {
             var state = new CL();
+            state = destructureWithProto(state);
             exports.xRefs[label] = {
                 state: state,
                 label: label,
                 setLogs: [],
                 index: 0,
-                copy: deepClone(state),
+                xlogs: [],
             };
             //@ts-ignore
             state && state.onChange && state.onChange();
+            exports.xRefs[label].actions = buildActions(label);
         }
     };
     var setAgain = function () {
         if (!exports.xRefs[label]) {
             intiate();
         }
-        exports.xRefs[label].renderer = function (fn) {
+        exports.xRefs[label].set = function (fn) {
             var props = [];
             for (var _i = 1; _i < arguments.length; _i++) {
                 props[_i - 1] = arguments[_i];
             }
+            var timeStart = Date.now();
             var copy = deepClone(exports.xRefs[label].state);
             var errorOccured = false;
             var errorMessage = "";
             try {
                 if (typeof fn === "function") {
                     fn.apply(exports.xRefs[label].state, props);
+                    (0, exports.postMessage)("useX", fn);
                     // actions.push(fn);
                     // xRefs[label].state = { ...xRefs[label].state };
                 }
@@ -204,14 +264,10 @@ function useX(CL, label) {
                 errorOccured = true;
                 errorMessage = e === null || e === void 0 ? void 0 : e.message;
             }
-            if (typeof fn !== "function") {
-                throw new Error("set is called and no action is passed");
-            }
             var _a = getCallStack(), fileName = _a.fileName, functionName = _a.functionName, lineNumber = _a.lineNumber;
             var fname = fileName.split("/")[fileName.split("/").length - 1];
             var updateSet = function () {
                 var _a;
-                console.time();
                 var changeList = {};
                 if (copy) {
                     changeList = findDiff(copy, exports.xRefs[label].state);
@@ -223,15 +279,17 @@ function useX(CL, label) {
                     }
                 }
                 Object.keys(changeList).forEach(function (path) {
-                    updateNestedObject(exports.xRefs[label].state, path
-                        .split(".")
-                        .slice(1, path.split(".").length - 1)
-                        .join("."));
+                    if (path) {
+                        updateNestedObject(exports.xRefs[label].state, path
+                            .split(".")
+                            .slice(1, path.split(".").length - 1)
+                            .join("."));
+                    }
                 });
                 if (exports.xConfig.enableDebugging) {
                     var log = {
                         fileName: fname.split("?")[0],
-                        functionName: functionName,
+                        functionName: functionName || "Set",
                         lineNumber: lineNumber,
                         changeList: changeList,
                         props: props,
@@ -239,6 +297,7 @@ function useX(CL, label) {
                         name: fn.name || "",
                         errorOccured: errorOccured,
                         errorMessage: errorMessage,
+                        duration: Date.now() - timeStart + " ms",
                     };
                     exports.xConfig.enableConsoleLogging &&
                         console.log("useX - " + log.name, log);
@@ -252,27 +311,28 @@ function useX(CL, label) {
             };
             exports.xRefs[label].state.onChange && exports.xRefs[label].state.onChange();
             updateSet();
-            exports.xRefs[label].state = destructureWithProto(exports.xRefs[label].state);
+            exports.xRefs[label].state = __assign({}, exports.xRefs[label].state);
             setCount(count + 1);
-            (exports.listeners === null || exports.listeners === void 0 ? void 0 : exports.listeners.onStateChange) && exports.listeners.onStateChange();
         };
-        exports.xRefs[label].actionRenderer = function (fn) {
-            var props = [];
-            for (var _i = 1; _i < arguments.length; _i++) {
-                props[_i - 1] = arguments[_i];
+        exports.xRefs[label].stateChanged = count;
+        exports.xRefs[label].triggerEvent = function (xEventobject) {
+            var _a;
+            var state = exports.xRefs[label].state;
+            if ((_a = state.events) === null || _a === void 0 ? void 0 : _a[xEventobject === null || xEventobject === void 0 ? void 0 : xEventobject.name]) {
+                state.events[xEventobject.name] = __assign({}, xEventobject);
+                setCount(count + 1);
             }
-            var copy = {};
-            if (exports.xConfig.enableDebugging) {
-                copy = deepClone(exports.xRefs[label].state);
+            else {
+                throw Error("event is not declared on X Class. refer to the documentation on xEvents!");
             }
+        };
+        exports.xRefs[label].setX = function (pathOfObjectToUpdate, value) {
+            var timeStart = Date.now();
             var errorOccured = false;
             var errorMessage = "";
             try {
-                if (typeof fn === "function") {
-                    fn.apply(exports.xRefs[label].state, props);
-                    exports.xRefs[label].onPlus && exports.xRefs[label].onPlus(fn);
-                    // actions.push(fn);
-                    // xRefs[label].state = { ...xRefs[label].state };
+                if (typeof pathOfObjectToUpdate === "string") {
+                    setStateX(exports.xRefs[label].state, pathOfObjectToUpdate.split(".").slice(1).join("."), value);
                 }
             }
             catch (e) {
@@ -280,99 +340,100 @@ function useX(CL, label) {
                 errorOccured = true;
                 errorMessage = e === null || e === void 0 ? void 0 : e.message;
             }
-            if (typeof fn !== "function") {
-                throw new Error("set is called and no action is passed");
-            }
-            var _a = getCallStack(), fileName = _a.fileName, functionName = _a.functionName, lineNumber = _a.lineNumber;
-            var fname = fileName.split("/")[fileName.split("/").length - 1];
             var updateSet = function () {
                 var _a;
+                var _b;
+                var _c = getCallStack(), fileName = _c.fileName, functionName = _c.functionName, lineNumber = _c.lineNumber;
+                var fname = fileName.split("/")[fileName.split("/").length - 1];
                 var changeList = {};
-                if (copy) {
-                    changeList = findDiff(copy, exports.xRefs[label].state);
-                    if (changeList && Object.keys(changeList).length > 0) {
-                        __spreadArray([], Object.keys(changeList), true).forEach(function (key) {
-                            changeList["state." + key] = changeList[key];
-                            delete changeList[key];
-                        });
-                    }
-                }
+                changeList = (_a = {}, _a[pathOfObjectToUpdate] = value, _a);
                 var log = {
                     fileName: fname.split("?")[0],
-                    functionName: functionName,
+                    functionName: functionName || "SetX",
                     lineNumber: lineNumber,
                     changeList: changeList,
-                    props: props,
+                    props: {},
                     index: exports.xRefs[label].index + 1,
-                    name: fn.name || "",
+                    name: "setX",
                     errorOccured: errorOccured,
                     errorMessage: errorMessage,
+                    duration: Date.now() - timeStart + " ms",
                 };
                 exports.xConfig.enableConsoleLogging && console.log("useX - " + log.name, log);
                 exports.xConfig.enableConsoleLogging &&
-                    console.log("useX - updated state", (_a = exports.xRefs[label]) === null || _a === void 0 ? void 0 : _a.state);
+                    console.log("useX - updated state", (_b = exports.xRefs[label]) === null || _b === void 0 ? void 0 : _b.state);
                 exports.xRefs[label].setLogs.unshift(log);
                 exports.xRefs[label].index++;
                 exports.xRefs[label].setLogs.length > 10 && exports.xRefs[label].setLogs.pop();
             };
             exports.xRefs[label].state.onChange && exports.xRefs[label].state.onChange();
             exports.xConfig.enableDebugging && updateSet();
-            exports.xRefs[label].state = destructureWithProto(exports.xRefs[label].state);
+            exports.xRefs[label].state = __assign({}, exports.xRefs[label].state);
             setCount(count + 1);
-            (exports.listeners === null || exports.listeners === void 0 ? void 0 : exports.listeners.onStateChange) && exports.listeners.onStateChange();
         };
+        exports.xRefs[label].xlog = function (logName, logValue) {
+            var _a;
+            var _b, _c, _d, _e, _f, _g;
+            if (exports.xConfig.enableDebugging) {
+                (_c = (_b = exports.xRefs[label]) === null || _b === void 0 ? void 0 : _b.xlogs) === null || _c === void 0 ? void 0 : _c.unshift((_a = {}, _a[logName] = logValue, _a));
+                if (((_e = (_d = exports.xRefs[label]) === null || _d === void 0 ? void 0 : _d.xlogs) === null || _e === void 0 ? void 0 : _e.length) > 20) {
+                    (_g = (_f = exports.xRefs[label]) === null || _f === void 0 ? void 0 : _f.xlogs) === null || _g === void 0 ? void 0 : _g.pop();
+                }
+            }
+        };
+        // xRefs[label].actionEvents = xEvents(getMethodNames(xRefs[label].actions));
     };
     setAgain();
-    (0, react_1.useEffect)(function () {
-        setAgain();
+    (0, react_1.useLayoutEffect)(function () {
+        if (mountRefsCount[label]) {
+            throw Error("Don't intialise useX " +
+                label +
+                " again!. use 'getParentX(" +
+                label +
+                ")' to get the instance of already created useX instance of " +
+                label);
+        }
+        else {
+            mountRefsCount[label] = 1;
+        }
         return function () {
             delete exports.xRefs[label];
-            (exports.listeners === null || exports.listeners === void 0 ? void 0 : exports.listeners.onStateChange) && exports.listeners.onStateChange();
+            delete mountRefsCount[label];
+            (listeners === null || listeners === void 0 ? void 0 : listeners.onStateChange) && listeners.onStateChange();
         };
     }, []);
+    //
     return {
         state: exports.xRefs[label].state,
-        set: exports.xRefs[label].renderer,
+        set: exports.xRefs[label].set,
+        dispatch: exports.xRefs[label].set,
+        actions: exports.xRefs[label].actions,
         stateChanged: count,
-        plus: exports.xRefs[label].actionRenderer,
-        onPlus: function (fn) {
-            if (typeof fn === "function")
-                exports.xRefs[label].onPlus = fn;
-        },
-        saveCopy: function () {
-            exports.xRefs[label].copy = deepClone(exports.xRefs[label].state);
-        },
-        resetState: function () {
-            exports.xRefs[label].renderer(function reset() {
-                exports.xRefs[label].state = __assign(__assign({}, destructureWithProto(exports.xRefs[label].state)), exports.xRefs[label].copy);
-            });
-        },
-        // trigger(fn: Function) {
-        //   if (typeof fn === "function") {
-        //     setCount(count + 1);
-        //     return fn();
-        //   }
-        // },
+        plus: exports.xRefs[label].set,
+        // onPlus: xRefs[label].onPlus,
+        triggerEvent: exports.xRefs[label].triggerEvent,
+        xlog: exports.xRefs[label].xlog,
+        setX: exports.xRefs[label].setX,
     };
 }
 exports.useX = useX;
-// export const onPlus = (actionsList: any) => {
-//   return actionsList.find((item: any) => actions.find(item));
-// };
-// export const useXEffect = (fn: Function, isActionCalled: boolean) => {
-//   if (isActionCalled) {
-//     fn();
-//   }
-// };
-// export const useXMemo = (fn: Function, isActionCalled: boolean) => {
-//   let returnVal = null;
-//   const [state, setState] = useState("not yet called!!!__");
-//   if (isActionCalled || state === "not yet called!!!__") {
-//     returnVal = fn();
-//     setState(returnVal);
-//   }
-//   return returnVal || state;
-// };
+function buildActions(label) {
+    var _a;
+    var methods = ((_a = exports.xRefs[label]) === null || _a === void 0 ? void 0 : _a.state) ? getMethodNames(exports.xRefs[label].state) : [];
+    var actions = {};
+    methods.forEach(function (item) {
+        actions[item] = function () {
+            var _a;
+            var props = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                props[_i] = arguments[_i];
+            }
+            (_a = exports.xRefs[label]).set.apply(_a, __spreadArray([exports.xRefs[label].state[item]], props, false));
+        };
+    });
+    return actions;
+}
+exports.buildActions = buildActions;
 function destructureWithProto(obj) {
     var result = __assign({}, obj);
     var prototype = Object.getPrototypeOf(obj);
@@ -380,12 +441,29 @@ function destructureWithProto(obj) {
         var prototypeProps = Object.getOwnPropertyNames(prototype);
         for (var _i = 0, prototypeProps_1 = prototypeProps; _i < prototypeProps_1.length; _i++) {
             var prop = prototypeProps_1[_i];
-            result[prop] = prototype[prop];
+            if (prop)
+                result[prop] = prototype[prop];
         }
     }
     return result;
 }
 function updateNestedObject(obj, path) {
+    if (path) {
+        var keys = path.split(".");
+        var newObj = obj;
+        var current = newObj;
+        if (keys.length)
+            for (var i = 0; i < keys.length; i++) {
+                var key = keys[i];
+                current[key] = Array.isArray(current[key])
+                    ? __spreadArray([], current[key], true) : __assign({}, current[key]);
+                current = current[key];
+            }
+        return newObj;
+    }
+    return obj;
+}
+function setStateX(obj, path, value) {
     var keys = path.split(".");
     var newObj = obj;
     var current = newObj;
@@ -393,10 +471,16 @@ function updateNestedObject(obj, path) {
         var key = keys[i];
         current[key] = Array.isArray(current[key])
             ? __spreadArray([], current[key], true) : __assign({}, current[key]);
-        current = current[key];
+        if (i + 1 !== keys.length) {
+            current = current[key];
+        }
+        else {
+            current[key] = value;
+        }
     }
     return newObj;
 }
+exports.setStateX = setStateX;
 var Collapsable = function (_a) {
     var children = _a.children, label = _a.label;
     var _b = (0, react_1.useState)(false), open = _b[0], setOpen = _b[1];
@@ -470,11 +554,11 @@ var StateView = function (_a) {
 };
 exports.StateView = StateView;
 var Switch = function (_a) {
-    var _b, _c, _d;
+    var _b;
     var State = _a.State;
-    var _e = (0, react_1.useState)(0), selectedTab = _e[0], setSelectedTab = _e[1];
-    var tabs = ["State", "Set/Action", "memos", "events"];
-    var _f = (0, react_1.useState)(0), count = _f[0], setCount = _f[1];
+    var _c = (0, react_1.useState)(0), selectedTab = _c[0], setSelectedTab = _c[1];
+    var tabs = ["State", "Set Logs", "Memos", "Logs"];
+    var _d = (0, react_1.useState)(0), count = _d[0], setCount = _d[1];
     var spanStyle = function (isSelected) {
         return {
             border: " 1px solid #DDD",
@@ -498,7 +582,7 @@ var Switch = function (_a) {
                     textAlign: "left",
                 }, children: tabs.map(function (item, i) { return ((0, jsx_runtime_1.jsxs)("span", { onMouseDown: function () { return setSelectedTab(i); }, 
                     //@ts-ignore
-                    style: spanStyle(selectedTab === i), children: [item, " ", i === 1 && (0, jsx_runtime_1.jsx)(exports.ValueRenderer, { text: State.index })] })); }) }), (0, jsx_runtime_1.jsx)("div", { style: { display: selectedTab === 0 ? "block" : "none" }, children: (0, jsx_runtime_1.jsx)(exports.StateView, { state: State.state }) }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 1 ? "block" : "none" }, children: [State.setLogs.length > 0 && ((0, jsx_runtime_1.jsx)("div", { style: { textAlign: "right" }, children: (0, jsx_runtime_1.jsx)("span", { style: { textDecoration: "underline", cursor: "pointer" }, onClick: function () {
+                    style: spanStyle(selectedTab === i), children: [item, " ", i === 1 && (0, jsx_runtime_1.jsx)(exports.ValueRenderer, { text: State.index })] }, i)); }) }), (0, jsx_runtime_1.jsx)("div", { style: { display: selectedTab === 0 ? "block" : "none" }, children: (0, jsx_runtime_1.jsx)(exports.StateView, { state: State.state }) }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 1 ? "block" : "none" }, children: [State.setLogs.length > 0 && ((0, jsx_runtime_1.jsx)("div", { style: { textAlign: "right" }, children: (0, jsx_runtime_1.jsx)("span", { style: { textDecoration: "underline", cursor: "pointer" }, onClick: function () {
                                 State.setLogs = [];
                                 State.index = 0;
                                 setCount(count + 1);
@@ -522,7 +606,7 @@ var Switch = function (_a) {
                                                     ? "Error!" + log.errorMessage
                                                     : "Success",
                                             },
-                                            _a) || {} }) }), (0, jsx_runtime_1.jsx)("div", { style: {
+                                            _a) || {} }) }), (0, jsx_runtime_1.jsx)("div", { style: { position: "absolute", top: "6px", right: "50px" }, children: log.duration }), (0, jsx_runtime_1.jsx)("div", { style: {
                                         position: "absolute",
                                         textAlign: "center",
                                         marginTop: "10px",
@@ -541,7 +625,11 @@ var Switch = function (_a) {
                                         height: "10px",
                                         background: log.errorOccured ? "red" : "green",
                                     } })] }, " set " + index + log.name));
-                    })] }), (0, jsx_runtime_1.jsx)("div", { style: { marginTop: "10px" } }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 2 ? "block" : "none" }, children: [(0, jsx_runtime_1.jsx)(exports.StateView, { state: ((_c = State.state) === null || _c === void 0 ? void 0 : _c.memos) || {}, autoOpenFirstLevel: true }), " "] }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 3 ? "block" : "none" }, children: [(0, jsx_runtime_1.jsx)(exports.StateView, { state: ((_d = State.state) === null || _d === void 0 ? void 0 : _d.events) || {}, autoOpenFirstLevel: true }), " "] })] }));
+                    })] }), (0, jsx_runtime_1.jsx)("div", { style: { marginTop: "10px" } }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 3 ? "block" : "none" }, children: [State.xlogs.length > 0 && ((0, jsx_runtime_1.jsx)("div", { style: { textAlign: "right" }, children: (0, jsx_runtime_1.jsx)("span", { style: { textDecoration: "underline", cursor: "pointer" }, onClick: function () {
+                                State.xlogs = [];
+                                setCount(count + 1);
+                            }, children: (0, jsx_runtime_1.jsx)("i", { children: "Clear Logs" }) }) })), " ", (State === null || State === void 0 ? void 0 : State.xlogs) &&
+                        (State === null || State === void 0 ? void 0 : State.xlogs.map(function (log, i) { return ((0, jsx_runtime_1.jsx)("div", { children: (0, jsx_runtime_1.jsx)(exports.StateView, { state: log }) }, State.xlogs.length - i)); }))] })] }));
 };
 exports.Switch = Switch;
 function XPlusWrapper(props) {
@@ -573,8 +661,8 @@ var Treeview = function (_a) {
                 color: "rgb(92 92 92)",
             }, children: [" ", Object.keys(state).length === 0 && ((0, jsx_runtime_1.jsxs)("i", { style: { color: "#999" }, children: [Array.isArray(state) ? "Array " : "Object ", " is Empty"] })), Object.keys(state)
                     .filter(function (key) { return typeof state[key] !== "function"; })
-                    .map(function (item) {
-                    return typeof state[item] === "object" && state[item] !== null ? ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsxs)("div", { className: "x-devtools-treview-header", style: {
+                    .map(function (item, i) {
+                    return typeof state[item] === "object" && state[item] !== null ? ((0, jsx_runtime_1.jsxs)("div", { children: [(0, jsx_runtime_1.jsxs)("div", { className: "x-devtools-treview-header", style: {
                                     cursor: "pointer",
                                     marginTop: "003px",
                                     paddingBottom: "5px",
@@ -588,7 +676,7 @@ var Treeview = function (_a) {
                                                         fill: "#444",
                                                     }, children: (0, jsx_runtime_1.jsx)("path", { d: "m80-160 400-640 400 640H80Z" }) }) }), (0, jsx_runtime_1.jsx)(exports.LabelRenderer, { label: item }), " "] }), ":", " ", Array.isArray(state[item]) ? ((0, jsx_runtime_1.jsx)("b", { children: (0, jsx_runtime_1.jsx)("i", { title: "Array", children: state[item].length > 0 ? " [..]" : " []" }) })) : ((0, jsx_runtime_1.jsx)("b", { children: (0, jsx_runtime_1.jsx)("i", { title: "Object", children: Object.keys(state[item]).length > 0 ? " {..}" : " {}" }) }))] }), openList.includes(item) &&
                                 state[item] &&
-                                typeof state[item] === "object" && ((0, jsx_runtime_1.jsx)(exports.Treeview, { state: state[item] }))] })) : ((0, jsx_runtime_1.jsxs)("div", { style: { marginTop: "3px", width: "auto" }, children: [(0, jsx_runtime_1.jsxs)("b", { style: { marginLeft: "10px" }, children: [(0, jsx_runtime_1.jsx)(exports.LabelRenderer, { label: item }), " "] }), ": ", (0, jsx_runtime_1.jsx)(exports.ValueRenderer, { text: state[item] })] }));
+                                typeof state[item] === "object" && ((0, jsx_runtime_1.jsx)(exports.Treeview, { state: state[item] }))] }, i)) : ((0, jsx_runtime_1.jsxs)("div", { style: { marginTop: "3px", width: "auto" }, children: [(0, jsx_runtime_1.jsxs)("b", { style: { marginLeft: "10px" }, children: [(0, jsx_runtime_1.jsx)(exports.LabelRenderer, { label: item }), " "] }), ": ", (0, jsx_runtime_1.jsx)(exports.ValueRenderer, { text: state[item] })] }));
                 })] }) }));
 };
 exports.Treeview = Treeview;
@@ -610,11 +698,11 @@ var UseXDevTools = function (_a) {
         }
     }, [showTools, setShowTools]);
     (0, react_1.useEffect)(function () {
-        exports.listeners.onStateChange = function () {
+        listeners.onStateChange = function () {
             setTimeout(function () { return setCount(count + 1); }, 50);
         };
         return function () {
-            exports.listeners.onStateChange = null;
+            listeners.onStateChange = null;
         };
     }, [setCount, count]);
     exports.xConfig.enableDebugging = true;
@@ -701,7 +789,7 @@ function xFetch(url, method, payload, qsObj, headers, signal) {
     if (headers === void 0) { headers = {}; }
     if (signal === void 0) { signal = null; }
     return __awaiter(this, void 0, void 0, function () {
-        var options, _a, queryString, response, data, error_1;
+        var options, _a, queryString;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
@@ -729,31 +817,13 @@ function xFetch(url, method, payload, qsObj, headers, signal) {
                             .join("&");
                         url += "?".concat(queryString);
                     }
-                    _b.label = 3;
-                case 3:
-                    _b.trys.push([3, 6, , 7]);
                     return [4 /*yield*/, fetch(url, {
                             headers: options.headers || {},
                             body: options.payload ? JSON.stringify(options.payload) : undefined,
                             method: options.method,
                             signal: signal,
                         })];
-                case 4:
-                    response = _b.sent();
-                    return [4 /*yield*/, response.json()];
-                case 5:
-                    data = _b.sent();
-                    if (response.ok) {
-                        return [2 /*return*/, data]; // Resolve with the data if the API call is successful
-                    }
-                    else {
-                        throw new Error(data.message || "An error occurred while making the API call");
-                    }
-                    return [3 /*break*/, 7];
-                case 6:
-                    error_1 = _b.sent();
-                    throw error_1; // Reject with the error if there's an issue with the API call
-                case 7: return [2 /*return*/];
+                case 3: return [2 /*return*/, _b.sent()];
             }
         });
     });
@@ -771,44 +841,69 @@ var useXFetch = function (url, qsObj, method, payload, headers) {
     var _d = (0, react_1.useState)(""), status = _d[0], setStatus = _d[1];
     var _e = (0, react_1.useState)(0), count = _e[0], setCount = _e[1];
     var _f = (0, react_1.useState)(false), loadSilently = _f[0], setLoadSilently = _f[1];
-    var _g = (0, react_1.useState)(null), controller = _g[0], setController = _g[1];
+    var _g = (0, react_1.useState)(0), statusCode = _g[0], setStatusCode = _g[1];
+    var _h = (0, react_1.useState)(null), controller = _h[0], setController = _h[1];
     var cancel = function () {
         if (controller && controller.abort())
             setStatus("cancelled");
         setController(null);
     };
     (0, react_1.useEffect)(function () {
-        if (count > 0) {
-            if (controller) {
-                cancel();
-                setCount(count + 1);
-            }
-            else {
-                !loadSilently && setIsLoading(true);
-                setError(null);
-                setData(null);
-                setStatus("loading");
-                var controller_1 = new AbortController();
-                setController(controller_1);
-                xFetch(url, method, payload, qsObj, headers, controller_1.signal)
-                    .then(function (data) {
-                    setData(data);
-                    setStatus("success");
+        var doit = function () {
+            if (count > 0) {
+                if (controller) {
+                    cancel();
+                    setCount(count + 1);
+                }
+                else {
+                    !loadSilently && setIsLoading(true);
                     setError(null);
-                })
-                    .catch(function (error) {
-                    if ((error === null || error === void 0 ? void 0 : error.name) !== "AbortError") {
-                        setError(error);
-                        setStatus("error");
-                    }
-                })
-                    .finally(function () {
-                    setController(null);
-                    setIsLoading(false);
-                    setLoadSilently(false);
-                });
+                    setStatus("loading");
+                    var controller_1 = new AbortController();
+                    setController(controller_1);
+                    xFetch(url, method, payload, qsObj, headers, controller_1.signal)
+                        .then(function (response) { return __awaiter(void 0, void 0, void 0, function () {
+                        var _a, _b;
+                        var _c;
+                        return __generator(this, function (_d) {
+                            switch (_d.label) {
+                                case 0:
+                                    setStatusCode(response.status);
+                                    if (!response.ok) return [3 /*break*/, 2];
+                                    _a = setData;
+                                    return [4 /*yield*/, response.json()];
+                                case 1:
+                                    _a.apply(void 0, [_d.sent()]);
+                                    setStatus("success");
+                                    setError(null);
+                                    return [3 /*break*/, 4];
+                                case 2:
+                                    _b = setError;
+                                    _c = {};
+                                    return [4 /*yield*/, response.json()];
+                                case 3:
+                                    _b.apply(void 0, [(_c.body = _d.sent(),
+                                            _c.message = "error occured",
+                                            _c)]);
+                                    setStatus("error");
+                                    setData(null);
+                                    _d.label = 4;
+                                case 4: return [2 /*return*/];
+                            }
+                        });
+                    }); })
+                        .catch(function (error) {
+                        setError({ body: error, message: (error === null || error === void 0 ? void 0 : error.message) || "" });
+                    })
+                        .finally(function () {
+                        setController(null);
+                        setIsLoading(false);
+                        setLoadSilently(false);
+                    });
+                }
             }
-        }
+        };
+        doit();
     }, [count]);
     (0, react_1.useEffect)(function () {
         return function () {
@@ -822,7 +917,16 @@ var useXFetch = function (url, qsObj, method, payload, headers) {
         setCount(count + 1);
         setLoadSilently(true);
     };
-    return { isLoading: isLoading, data: data, error: error, status: status, call: call, cancel: cancel, callSilently: callSilently };
+    return {
+        isLoading: isLoading,
+        data: data,
+        error: error,
+        status: status,
+        call: call,
+        cancel: cancel,
+        callSilently: callSilently,
+        statusCode: statusCode,
+    };
 };
 exports.useXFetch = useXFetch;
 var useXAsync = function (asyncFunction) {
@@ -917,7 +1021,7 @@ function useXForm(Obj, validateForm) {
     var setErrors = function (fn) {
         typeof fn === "function" && fn();
         setCount(count + 1);
-        setE(errors);
+        setE(__assign({}, errors));
     };
     return {
         data: data,
@@ -966,79 +1070,31 @@ function resetPrimitiveValues(obj) {
     }
     return obj;
 }
-// quick state
+// usePrimitive
 function useQ(val) {
     var setState = function (val) {
-        if (typeof val === "function") {
-            val();
-            set(__assign({}, state));
-        }
-        else {
-            set(__assign(__assign({}, state), { val: val }));
-        }
+        set(__assign(__assign({}, state), { val: val }));
     };
     var _a = (0, react_1.useState)({
         val: val,
         set: setState,
     }), state = _a[0], set = _a[1];
     state.set = setState;
-    return state;
+    return __assign(__assign({}, state), { setQ: function (pathToObjectToChange, newVal) {
+            setStateX(state, pathToObjectToChange.split(".").slice(1).join("."), newVal);
+            setState(state.val);
+        } });
 }
 exports.useQ = useQ;
-function XEvents() {
-    var eventNames = [];
-    for (var _i = 0; _i < arguments.length; _i++) {
-        eventNames[_i] = arguments[_i];
+function xEvents(arr) {
+    var result = {};
+    for (var _i = 0, arr_1 = arr; _i < arr_1.length; _i++) {
+        var item = arr_1[_i];
+        result[item] = { name: item };
     }
-    var events = eventNames.reduce(function (a, b) {
-        // let temp = {
-        //   name: b,
-        //   trigger() {
-        //     a[b] = { ...temp };
-        //   },
-        // };
-        a[b] = 0;
-        return a;
-    }, {});
-    return events;
+    return result;
 }
-exports.XEvents = XEvents;
-// export function triggerEvent() {}
-// export function useXEvent<T extends string[]>(
-//   ...eventNames: T
-// ): ParamsToObject<T> {
-//   const [events] = useState<Partial<ParamsToObject<T>>>(
-//     eventNames.reduce((a: any, b) => {
-//       a[b] = 0;
-//       return a;
-//     }, {})
-//   );
-//   return events as ParamsToObject<T>;
-//   //   trigger(eventName: T) {
-//   //     setEvents({
-//   //       ...events,
-//   //       [eventName as string]: events[eventName as string]++,
-//   //     });
-//   //     setCount(count + 1);
-//   //   },
-//   //   count,
-//   // };
-// }
-// export type TXEvent = {
-//   [key: string]: IXEvent;
-// };
-// export const useXEffect = (fn: () => void, eventsArray: any) => {
-//   useEffect(
-//     fn,
-//     eventsArray.map((event) => xRefs[])
-//   );
-// };
-// export const useXMemo = (fn: () => void, eventsArray:any) => {
-//   return useMemo(
-//     fn,
-//     eventsArray.map((event) => event.count)
-//   );
-// };
+exports.xEvents = xEvents;
 function usePagination(initialPage, initialTotalPages, initialItemsPerPage) {
     if (initialPage === void 0) { initialPage = 1; }
     if (initialTotalPages === void 0) { initialTotalPages = -1; }
@@ -1129,3 +1185,208 @@ function deepClone(obj) {
     }, {});
 }
 exports.deepClone = deepClone;
+function useArray(initialList) {
+    if (initialList === void 0) { initialList = []; }
+    var _a = (0, react_1.useState)(initialList), list = _a[0], setList = _a[1];
+    // Function to add an item to the list at a specific index or at the end if no index is provided
+    var updateItem = function (item, index) {
+        if (index === void 0) { index = list.length; }
+        if (index < 0 || index > list.length) {
+            throw new Error("Invalid index");
+        }
+        var updatedList = __spreadArray([], list, true);
+        updatedList.splice(index, 0, item);
+        setList(updatedList);
+    };
+    // Function to remove an item from the list at a specific index
+    var removeItem = function (index) {
+        if (index < 0 || index >= list.length) {
+            throw new Error("Invalid index");
+        }
+        var updatedList = __spreadArray([], list, true);
+        updatedList.splice(index, 1);
+        setList(updatedList);
+    };
+    return {
+        addItem: updateItem,
+        updateItem: updateItem,
+        removeItem: removeItem,
+        list: __spreadArray([], list, true), // Return a copy of the list to ensure immutability
+    };
+}
+exports.useArray = useArray;
+function useString(initialValue) {
+    if (initialValue === void 0) { initialValue = ""; }
+    var _a = (0, react_1.useState)(initialValue), val = _a[0], setVal = _a[1];
+    var isEmpty = function () {
+        return val !== "" && val !== null && val !== undefined;
+    };
+    var isNull = function () {
+        return val === null;
+    };
+    var isUndefined = function () {
+        return val === undefined;
+    };
+    var toInt = function () {
+        return parseInt(val);
+    };
+    var toFloat = function (precision) {
+        if (precision === void 0) { precision = 2; }
+        return parseFloat(val).toFixed(precision);
+    };
+    var toIntOrZero = function () {
+        return isNaN(parseInt(val)) ? 0 : parseInt(val);
+    };
+    var toFloatOrZero = function (precision) {
+        if (precision === void 0) { precision = 2; }
+        return isNaN(parseFloat(val))
+            ? parseFloat("0").toFixed(precision)
+            : parseFloat(val).toFixed(precision);
+    };
+    return {
+        val: val,
+        setVal: setVal,
+        isEmpty: isEmpty,
+        isNull: isNull,
+        isUndefined: isUndefined,
+        toInt: toInt,
+        toFloat: toFloat,
+        isNaN: isNaN,
+        toIntOrZero: toIntOrZero,
+        toFloatOrZero: toFloatOrZero,
+    };
+}
+exports.useString = useString;
+function useFloat(initialValue, precision) {
+    if (initialValue === void 0) { initialValue = 0; }
+    if (precision === void 0) { precision = 2; }
+    var _a = (0, react_1.useState)(parseFloat(initialValue.toString()).toFixed(precision)), val = _a[0], setValInternal = _a[1];
+    var setVal = function (newValue) {
+        var parsedValue = parseFloat(newValue);
+        if (isNaN(parsedValue)) {
+            setValInternal(parseFloat("0").toFixed(precision));
+        }
+        else {
+            setValInternal(parsedValue.toFixed(precision));
+        }
+    };
+    var sum = (0, react_1.useCallback)(function (value) {
+        setVal((parseFloat(val) + parseFloat(value)).toFixed(precision));
+    }, [val, precision]);
+    var subtract = (0, react_1.useCallback)(function (value) {
+        setVal((parseFloat(val) - parseFloat(value)).toFixed(precision));
+    }, [val, precision]);
+    var multiply = (0, react_1.useCallback)(function (value) {
+        setVal((parseFloat(val) * parseFloat(value)).toFixed(precision));
+    }, [val, precision]);
+    var divide = (0, react_1.useCallback)(function (value) {
+        if (parseFloat(value) === 0) {
+            setVal(parseFloat("0").toFixed(precision));
+        }
+        else {
+            setVal((parseFloat(val) / parseFloat(value)).toFixed(precision));
+        }
+    }, [val, precision]);
+    var toInt = function () {
+        return parseInt(val);
+    };
+    var toIntFloor = function () {
+        return Math.floor(parseFloat(val));
+    };
+    var toIntCeil = function () {
+        return Math.ceil(parseFloat(val));
+    };
+    var toIntRound = function () {
+        return Math.round(parseFloat(val));
+    };
+    return {
+        val: val,
+        sum: sum,
+        subtract: subtract,
+        multiply: multiply,
+        divide: divide,
+        setVal: setVal,
+        toInt: toInt,
+        toIntFloor: toIntFloor,
+        toIntCeil: toIntCeil,
+        toIntRound: toIntRound,
+    };
+}
+exports.useFloat = useFloat;
+function xInt(num) {
+    return {
+        sum: function (other) { return num + other; },
+        subtract: function (other) { return num - other; },
+        multiply: function (other) { return num * other; },
+    };
+}
+exports.xInt = xInt;
+function xFloat(num, precision) {
+    if (precision === void 0) { precision = 2; }
+    var roundedNum = parseFloat(num.toFixed(precision));
+    return {
+        sum: function (other) {
+            var result = roundedNum + other;
+            return parseFloat(result.toFixed(precision));
+        },
+        subtract: function (other) {
+            var result = roundedNum - other;
+            return parseFloat(result.toFixed(precision));
+        },
+        multiply: function (other) {
+            var result = roundedNum * other;
+            return parseFloat(result.toFixed(precision));
+        },
+    };
+}
+exports.xFloat = xFloat;
+function useObject(initialObject) {
+    if (initialObject === void 0) { initialObject = {}; }
+    var _a = (0, react_1.useState)(initialObject), object = _a[0], setObject = _a[1];
+    var setItem = function (key, value) {
+        setObject(function (prevObject) {
+            var _a;
+            return (__assign(__assign({}, prevObject), (_a = {}, _a[key] = value, _a)));
+        });
+    };
+    var getItem = function (key) {
+        return object[key];
+    };
+    var removeItem = function (key) {
+        setObject(function (prevObject) {
+            var updatedObject = __assign({}, prevObject);
+            delete updatedObject[key];
+            return updatedObject;
+        });
+    };
+    var hasKey = function (key) {
+        return key in object;
+    };
+    var keys = Object.keys(object);
+    return {
+        setItem: setItem,
+        getItem: getItem,
+        removeItem: removeItem,
+        hasKey: hasKey,
+        object: object,
+        keys: keys,
+    };
+}
+exports.useObject = useObject;
+exports.default = useObject;
+function getMethodNames(obj) {
+    var methodNames = [];
+    var prototype = obj;
+    while (prototype && prototype !== Object.prototype) {
+        var keys = Reflect.ownKeys(prototype);
+        keys.forEach(function (key) {
+            var value = prototype[key];
+            if (typeof value === "function" && key !== "constructor") {
+                methodNames.push(key);
+            }
+        });
+        prototype = Object.getPrototypeOf(prototype);
+    }
+    console.log(methodNames);
+    return methodNames;
+}

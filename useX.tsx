@@ -13,20 +13,26 @@ export const xConfig = {
   enableConsoleLogging: false,
   autoDestructureState: false,
 };
-export const listeners: any = {
+const listeners: any = {
   onStateChange: null,
 };
 export function getParentState<T>(CL: new () => T): {
   state: T;
-  set: Function;
-  plus: Function;
-  onPlus: Function;
-  saveCopy: Function;
-  resetState: Function;
+  set: (actionMethod: Function, ...propsToAction: any) => void;
+  actions: MethodsOnly<T>;
   stateChanged: number;
+  // onPlus: Function;
+  plus: (actionMethod: Function, ...propsToAction: any) => void;
+  dispatch: (actionMethod: Function, ...propsToAction: any) => void;
+  triggerEvent: (xEventobject: { name: string }) => void;
+  xlog: (title: string, valueToLog: any) => void;
+  setX: (pathToObjectToUpdate: string, newVal: any) => void;
 } {
   //
-  const item = xRefs[CL.name];
+
+  let label = CL.name;
+
+  const item = xRefs[label];
   if (!item) {
     throw Error(
       "Error Occured in getParentState. The requested state is not created by any of the parent components."
@@ -34,26 +40,68 @@ export function getParentState<T>(CL: new () => T): {
   }
   return {
     state: item.state,
-    set: item.renderer,
-    plus: item.actionRenderer,
-    onPlus: item.onPlus,
-    saveCopy: item.saveCopy,
-    resetState: item.resetState,
+    set: item.set,
+    plus: item.set,
+    // onPlus: item.onPlus,
     stateChanged: item.count,
+    actions: item.actions,
+    dispatch: item.set,
+    triggerEvent: item.triggerEvent,
+    xlog: item.log,
+    setX: item.setX,
   };
 }
 export const getX = getParentState;
-// let tempCallStack: any = [];
-// function call(fn: any, state: any) {
-//   if (tempCallStack.indexOf(fn) === -1) {
-//     tempCallStack.push(fn);
-//     setTimeout(() => {
-//       fn.call(state);
-//       tempCallStack = tempCallStack.filter((item: any) => item !== fn);
-//     }, 0);
-//   }
-// }
+export const x = getParentState;
 
+interface Channel {
+  [key: string]: ((data: any) => void)[];
+}
+
+const channels: Channel = {};
+
+export const postMessage = (channelName: string, ...props: any) => {
+  const channelCallbacks = channels[channelName] || [];
+  channelCallbacks.forEach((cb: Function) => {
+    cb(...props);
+  });
+};
+
+export const useXChannel = (
+  channelName: string,
+  callback?: (...props: any[]) => void
+) => {
+  if (!channels[channelName]) {
+    channels[channelName] = [];
+  }
+
+  const post = (...props: any) => {
+    const channelCallbacks = channels[channelName] || [];
+    channelCallbacks.forEach((cb: Function) => {
+      cb !== callback && cb(...props);
+    });
+  };
+
+  useEffect(() => {
+    if (callback) {
+      channels[channelName].push(callback);
+    }
+
+    return () => {
+      if (callback) {
+        const index = channels[channelName].indexOf(callback);
+        if (index !== -1) {
+          channels[channelName].splice(index, 1);
+        }
+      }
+    };
+  }, [channelName, callback]);
+
+  return post;
+};
+export const getListenerCount = (ChannelName: string) => {
+  return channels[ChannelName]?.length || 0;
+};
 export function getCallStack(splitIndex = 3) {
   const stack = new Error().stack;
   const stackLines = stack?.split("\n")[splitIndex]?.trim()?.split("(") || [];
@@ -86,7 +134,7 @@ export function findDiff(obj1: any, obj2: any, path = ""): Record<string, any> {
         const nestedChanges = findDiff(obj1[key], obj2[key], newPath);
         Object.assign(changes, nestedChanges);
       } else {
-        changes[`${newPath} [D]`] = undefined;
+        changes[`${newPath} [D]`] = "deleted";
       }
     }
     for (const key in obj2) {
@@ -102,82 +150,64 @@ export function findDiff(obj1: any, obj2: any, path = ""): Record<string, any> {
   return changes;
 }
 
-// export let actions: any = [];
-// called actions
-// function extractSubstring(inputString: string) {
-//   const lastIndex = inputString.lastIndexOf(" [");
-
-//   if (lastIndex !== -1) {
-//     return inputString.slice(0, lastIndex);
-//   }
-
-//   return inputString;
-// }
-function getRandomString() {
-  const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-
-  for (let i = 0; i < 9; i++) {
-    const randomIndex = Math.floor(Math.random() * characters.length);
-    result += characters.charAt(randomIndex);
-  }
-
-  return result;
-}
 const mountRefsCount: any = {};
-const codes: any = {};
-// export function X<T extends Object>(
-//   CL: new () => T,
-//   label?: any
-// ): {
-//   state: T;
-//   set: Function;
-//   stateChanged: number;
-//   onPlus: Function;
-//   plus: Function;
-//   saveCopy: Function;
-//   resetState: Function;
-// } {
-//   return useX(CL, label);
-// }
+
+export function useXOnAction(fnCallback: Function, actions: Function[]) {
+  useXChannel("useX", (type: Function) => {
+    if (actions.includes(type)) {
+      fnCallback();
+    }
+  });
+}
+
 export function useX<T extends Object>(
-  CL: new () => T,
-  label?: any
+  CL: new () => T
 ): {
   state: T;
-  set: Function;
+  set: (actionMethod: Function, ...propsToAction: any) => void;
+  actions: MethodsOnly<T>;
   stateChanged: number;
-  onPlus: Function;
-  plus: Function;
-  saveCopy: Function;
-  resetState: Function;
+  // onPlus: Function;
+  plus: (actionMethod: Function, ...propsToAction: any) => void;
+  dispatch: (actionMethod: Function, ...propsToAction: any) => void;
+  triggerEvent: (xEventobject: { name: string }) => void;
+  xlog: (title: string, valueToLog: any) => void;
+  setX: (pathToObjectToUpdate: string, newVal: any) => void;
 } {
   const [count, setCount] = useState(0);
+  useEffect(() => {
+    if (count > 0) {
+      setTimeout(() => {
+        listeners?.onStateChange && listeners.onStateChange();
+      }, 200);
+    }
+  }, [count]);
 
-  if (!label) {
-    label = CL.name;
-  }
+  let label = CL.name;
+
   const intiate = () => {
     if (!xRefs[label]) {
-      const state = new CL();
-
+      let state = new CL();
+      state = destructureWithProto(state);
       xRefs[label] = {
         state,
         label,
         setLogs: [],
         index: 0,
-        copy: deepClone(state),
+
+        xlogs: [],
       };
+
       //@ts-ignore
       state && state.onChange && state.onChange();
+      xRefs[label].actions = buildActions(label);
     }
   };
   const setAgain = () => {
     if (!xRefs[label]) {
       intiate();
     }
-    xRefs[label].renderer = (fn: Function, ...props: any) => {
+    xRefs[label].set = (fn: Function, ...props: any) => {
       const timeStart = Date.now();
       const copy = deepClone(xRefs[label].state);
       let errorOccured = false;
@@ -185,7 +215,7 @@ export function useX<T extends Object>(
       try {
         if (typeof fn === "function") {
           fn.apply(xRefs[label].state, props);
-
+          postMessage("useX", fn);
           // actions.push(fn);
           // xRefs[label].state = { ...xRefs[label].state };
         }
@@ -209,13 +239,15 @@ export function useX<T extends Object>(
           }
         }
         Object.keys(changeList).forEach((path) => {
-          updateNestedObject(
-            xRefs[label].state,
-            path
-              .split(".")
-              .slice(1, path.split(".").length - 1)
-              .join(".")
-          );
+          if (path) {
+            updateNestedObject(
+              xRefs[label].state,
+              path
+                .split(".")
+                .slice(1, path.split(".").length - 1)
+                .join(".")
+            );
+          }
         });
 
         if (xConfig.enableDebugging) {
@@ -244,24 +276,34 @@ export function useX<T extends Object>(
       };
       xRefs[label].state.onChange && xRefs[label].state.onChange();
       updateSet();
-      xRefs[label].state = destructureWithProto(xRefs[label].state);
+      xRefs[label].state = { ...xRefs[label].state };
       setCount(count + 1);
-      listeners?.onStateChange && listeners.onStateChange();
     };
-    xRefs[label].actionRenderer = (fn: Function, ...props: any) => {
-      const timeStart = Date.now();
-      let copy = {};
-      if (xConfig.enableDebugging) {
-        copy = deepClone(xRefs[label].state);
+
+    xRefs[label].stateChanged = count;
+    xRefs[label].triggerEvent = (xEventobject: any) => {
+      let state = xRefs[label].state;
+      if (state.events?.[xEventobject?.name]) {
+        state.events[xEventobject.name] = { ...xEventobject };
+        setCount(count + 1);
+      } else {
+        throw Error(
+          "event is not declared on X Class. refer to the documentation on xEvents!"
+        );
       }
+    };
+    xRefs[label].setX = (pathOfObjectToUpdate: string, value: any) => {
+      const timeStart = Date.now();
+
       let errorOccured = false;
       let errorMessage = "";
       try {
-        if (typeof fn === "function") {
-          fn.apply(xRefs[label].state, props);
-          xRefs[label].onPlus && xRefs[label].onPlus(fn);
-          // actions.push(fn);
-          // xRefs[label].state = { ...xRefs[label].state };
+        if (typeof pathOfObjectToUpdate === "string") {
+          setStateX(
+            xRefs[label].state,
+            pathOfObjectToUpdate.split(".").slice(1).join("."),
+            value
+          );
         }
       } catch (e: any) {
         console.error(e);
@@ -269,31 +311,21 @@ export function useX<T extends Object>(
         errorMessage = e?.message;
       }
 
-      // if (typeof fn !== "function") {
-      //   throw new Error("set is called and no action is passed");
-      // }
-      let { fileName, functionName, lineNumber }: any = getCallStack();
-      let fname = fileName.split("/")[fileName.split("/").length - 1];
       const updateSet = () => {
+        let { fileName, functionName, lineNumber }: any = getCallStack();
+        let fname = fileName.split("/")[fileName.split("/").length - 1];
         let changeList: any = {};
-        if (copy) {
-          changeList = findDiff(copy, xRefs[label].state);
-          if (changeList && Object.keys(changeList).length > 0) {
-            [...Object.keys(changeList)].forEach((key: string) => {
-              changeList["state." + key] = changeList[key];
-              delete changeList[key];
-            });
-          }
-        }
+
+        changeList = { [pathOfObjectToUpdate]: value };
 
         const log = {
           fileName: fname.split("?")[0],
-          functionName: functionName || "Plus",
+          functionName: functionName || "SetX",
           lineNumber,
           changeList,
-          props,
+          props: {},
           index: xRefs[label].index + 1,
-          name: fn.name || "",
+          name: "setX",
           errorOccured,
           errorMessage,
           duration: Date.now() - timeStart + " ms",
@@ -307,25 +339,20 @@ export function useX<T extends Object>(
       };
       xRefs[label].state.onChange && xRefs[label].state.onChange();
       xConfig.enableDebugging && updateSet();
-      xRefs[label].state = destructureWithProto(xRefs[label].state);
+      xRefs[label].state = { ...xRefs[label].state };
+
       setCount(count + 1);
-      listeners?.onStateChange && listeners.onStateChange();
     };
-    xRefs[label].onPlus = (fn: Function) => {
-      if (typeof fn === "function") xRefs[label].onPlus = fn;
+    xRefs[label].xlog = (logName: string, logValue: any) => {
+      if (xConfig.enableDebugging) {
+        xRefs[label]?.xlogs?.unshift({ [logName]: logValue });
+        if (xRefs[label]?.xlogs?.length > 20) {
+          xRefs[label]?.xlogs?.pop();
+        }
+      }
     };
-    xRefs[label].saveCopy = () => {
-      xRefs[label].copy = deepClone(xRefs[label].state);
-    };
-    xRefs[label].resetState = () => {
-      xRefs[label].renderer(function reset() {
-        xRefs[label].state = {
-          ...destructureWithProto(xRefs[label].state),
-          ...xRefs[label].copy,
-        };
-      });
-    };
-    xRefs[label].stateChanged = count;
+
+    // xRefs[label].actionEvents = xEvents(getMethodNames(xRefs[label].actions));
   };
   setAgain();
   useLayoutEffect(() => {
@@ -333,7 +360,7 @@ export function useX<T extends Object>(
       throw Error(
         "Don't intialise useX " +
           label +
-          " again!. use 'getParentState(" +
+          " again!. use 'getParentX(" +
           label +
           ")' to get the instance of already created useX instance of " +
           label
@@ -351,36 +378,38 @@ export function useX<T extends Object>(
   //
   return {
     state: xRefs[label].state,
-    set: xRefs[label].renderer,
+    set: xRefs[label].set,
+    dispatch: xRefs[label].set,
+    actions: xRefs[label].actions,
     stateChanged: count,
-    plus: xRefs[label].actionRenderer,
-    onPlus: xRefs[label].onPlus,
-    saveCopy: xRefs[label].saveCopy,
-    resetState: xRefs[label].resetState,
+    plus: xRefs[label].set,
+    // onPlus: xRefs[label].onPlus,
+    triggerEvent: xRefs[label].triggerEvent,
+    xlog: xRefs[label].xlog,
+    setX: xRefs[label].setX,
   };
 }
 
-// export const onPlus = (actionsList: any) => {
-//   return actionsList.find((item: any) => actions.find(item));
-// };
+type MethodKeys<T> = {
+  [K in keyof T]: T[K] extends (...args: any[]) => any ? K : never;
+}[keyof T];
 
-// export const useXEffect = (fn: Function, isActionCalled: boolean) => {
-//   if (isActionCalled) {
-//     fn();
-//   }
-// };
+type MethodsOnly<T> = Pick<T, MethodKeys<T>>;
 
-// export const useXMemo = (fn: Function, isActionCalled: boolean) => {
-//   let returnVal = null;
-//   const [state, setState] = useState("not yet called!!!__");
+export function buildActions<T>(label: string): {
+  methods: MethodsOnly<T>;
+} {
+  let methods = xRefs[label]?.state ? getMethodNames(xRefs[label].state) : [];
+  let actions: any = {};
+  methods.forEach((item: any) => {
+    actions[item] = function (...props: any) {
+      xRefs[label].set(xRefs[label].state[item], ...props);
+    };
+  });
 
-//   if (isActionCalled || state === "not yet called!!!__") {
-//     returnVal = fn();
-//     setState(returnVal);
-//   }
+  return actions as { methods: MethodsOnly<T> };
+}
 
-//   return returnVal || state;
-// };
 function destructureWithProto(obj: any) {
   const result = { ...obj };
   const prototype = Object.getPrototypeOf(obj);
@@ -389,13 +418,32 @@ function destructureWithProto(obj: any) {
     const prototypeProps = Object.getOwnPropertyNames(prototype);
 
     for (const prop of prototypeProps) {
-      result[prop] = prototype[prop];
+      if (prop) result[prop] = prototype[prop];
     }
   }
 
   return result;
 }
 function updateNestedObject<T>(obj: T, path: string): T {
+  if (path) {
+    const keys = path.split(".");
+    const newObj = obj;
+    let current: any = newObj;
+
+    if (keys.length)
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        current[key] = Array.isArray(current[key])
+          ? [...current[key]]
+          : { ...current[key] };
+        current = current[key];
+      }
+
+    return newObj;
+  }
+  return obj;
+}
+export function setStateX<T>(obj: T, path: string, value: any): T {
   const keys = path.split(".");
   const newObj = obj;
   let current: any = newObj;
@@ -405,7 +453,11 @@ function updateNestedObject<T>(obj: T, path: string): T {
     current[key] = Array.isArray(current[key])
       ? [...current[key]]
       : { ...current[key] };
-    current = current[key];
+    if (i + 1 !== keys.length) {
+      current = current[key];
+    } else {
+      current[key] = value;
+    }
   }
 
   return newObj;
@@ -527,26 +579,26 @@ export const LabelRenderer = ({ label }: any) => {
       {label.endsWith("[M]") ? (
         <span title={"Modified"} style={{ color: "#bc7a00" }}>
           {/* <span
-              style={{ color: "#bc7a00", fontSize: "large", fontWeight: "bold" }}
-            >
-              *
-            </span>{" "} */}
+            style={{ color: "#bc7a00", fontSize: "large", fontWeight: "bold" }}
+          >
+            *
+          </span>{" "} */}
           {label.substr(0, label.length - 3)}{" "}
         </span>
       ) : label.endsWith("[A]") ? (
         <span title={"Added"} style={{ color: "green" }}>
           {/* <span
-              style={{ color: "green", fontSize: "large", fontWeight: "bold" }}
-            >
-              +
-            </span> */}
+            style={{ color: "green", fontSize: "large", fontWeight: "bold" }}
+          >
+            +
+          </span> */}
           {label.substr(0, label.length - 3)}{" "}
         </span>
       ) : label.endsWith("[D]") ? (
         <span title={"Deleted"} style={{ color: "#df0000" }}>
           {/* <span style={{ color: "red", fontSize: "large", fontWeight: "bold" }}>
-              -
-            </span> */}
+            -
+          </span> */}
           {label.substr(0, label.length - 3)}{" "}
         </span>
       ) : (
@@ -576,7 +628,7 @@ export const StateView = ({
 
 export const Switch = ({ State }: any) => {
   const [selectedTab, setSelectedTab] = useState<number>(0);
-  const tabs = ["State", "Set/Action", "memos", "events"];
+  const tabs = ["State", "Set Logs", "Memos", "Logs"];
   const [count, setCount] = useState(0);
 
   const spanStyle = (isSelected: boolean) => {
@@ -608,6 +660,7 @@ export const Switch = ({ State }: any) => {
       >
         {tabs.map((item, i) => (
           <span
+            key={i}
             onMouseDown={() => setSelectedTab(i)}
             //@ts-ignore
             style={spanStyle(selectedTab === i)}
@@ -709,14 +762,29 @@ export const Switch = ({ State }: any) => {
 
       <div style={{ marginTop: "10px" }}></div>
 
-      <div style={{ display: selectedTab === 2 ? "block" : "none" }}>
+      {/* <div style={{ display: selectedTab === 2 ? "block" : "none" }}>
         <StateView state={State.state?.memos || {}} autoOpenFirstLevel={true} />{" "}
-      </div>
+      </div> */}
       <div style={{ display: selectedTab === 3 ? "block" : "none" }}>
-        <StateView
-          state={State.state?.events || {}}
-          autoOpenFirstLevel={true}
-        />{" "}
+        {State.xlogs.length > 0 && (
+          <div style={{ textAlign: "right" }}>
+            <span
+              style={{ textDecoration: "underline", cursor: "pointer" }}
+              onClick={() => {
+                State.xlogs = [];
+                setCount(count + 1);
+              }}
+            >
+              <i>Clear Logs</i>
+            </span>
+          </div>
+        )}{" "}
+        {State?.xlogs &&
+          State?.xlogs.map((log: any, i: number) => (
+            <div key={State.xlogs.length - i}>
+              <StateView state={log} />
+            </div>
+          ))}
       </div>
     </div>
   );
@@ -788,9 +856,9 @@ export const Treeview = ({ state, autoOpenFirstLevel = false }: any) => {
         )}
         {Object.keys(state)
           .filter((key) => typeof state[key] !== "function")
-          .map((item) => {
+          .map((item, i) => {
             return typeof state[item] === "object" && state[item] !== null ? (
-              <>
+              <div key={i}>
                 <div
                   className="x-devtools-treview-header"
                   style={{
@@ -845,7 +913,7 @@ export const Treeview = ({ state, autoOpenFirstLevel = false }: any) => {
                   typeof state[item] === "object" && (
                     <Treeview state={state[item]} />
                   )}
-              </>
+              </div>
             ) : (
               <div style={{ marginTop: "3px", width: "auto" }}>
                 <b style={{ marginLeft: "10px" }}>
@@ -863,6 +931,7 @@ export const Treeview = ({ state, autoOpenFirstLevel = false }: any) => {
 export const UseXDevTools = ({
   XIconPosition = { bottom: "50px", right: "50px" },
   enableConsoleLogging = false,
+
   hideXPlusIcon = false,
   disableToggleESCKey = false,
 }: TXDevToolsProps) => {
@@ -975,44 +1044,44 @@ export const UseXDevTools = ({
             }}
           >
             {/* <span
-                className={"usex-devtools-dots"}
-                style={{
-                  borderRadius: "5px",
-                  border: "1px solid white",
-                  background: "white",
-                  width: "5px",
-                  height: "5px",
-                  left: "21.5px",
-                  top: "10px",
-                  position: "absolute",
-                }}
-              ></span>
-              <span
-                className={"usex-devtools-dots"}
-                style={{
-                  borderRadius: "5px",
-                  border: "1px solid white",
-                  background: "white",
-                  width: "5px",
-                  height: "5px",
-                  left: "12px",
-                  top: "30px",
-                  position: "absolute",
-                }}
-              ></span>
-              <span
-                className={"usex-devtools-dots"}
-                style={{
-                  borderRadius: "5px",
-                  border: "1px solid white",
-                  background: "white",
-                  width: "5px",
-                  height: "5px",
-                  left: "32px",
-                  top: "30px",
-                  position: "absolute",
-                }}
-              ></span> */}
+              className={"usex-devtools-dots"}
+              style={{
+                borderRadius: "5px",
+                border: "1px solid white",
+                background: "white",
+                width: "5px",
+                height: "5px",
+                left: "21.5px",
+                top: "10px",
+                position: "absolute",
+              }}
+            ></span>
+            <span
+              className={"usex-devtools-dots"}
+              style={{
+                borderRadius: "5px",
+                border: "1px solid white",
+                background: "white",
+                width: "5px",
+                height: "5px",
+                left: "12px",
+                top: "30px",
+                position: "absolute",
+              }}
+            ></span>
+            <span
+              className={"usex-devtools-dots"}
+              style={{
+                borderRadius: "5px",
+                border: "1px solid white",
+                background: "white",
+                width: "5px",
+                height: "5px",
+                left: "32px",
+                top: "30px",
+                position: "absolute",
+              }}
+            ></span> */}
             <span
               style={{
                 left: "14px",
@@ -1039,21 +1108,21 @@ export const UseXDevTools = ({
               </span>
             </span>
             {/* //   style={{
-            //     zIndex: 1000000001,
-            //     width: "50px",
-            //     height: "50px",
-            //     background: "rgb(2 137 101)",
-            //     borderRadius: "50px",
-            //     position: "fixed",
-  
-            //     userSelect: "none",
-            //     boxShadow: "0px 0px 10px 1px #CCC",
-            //     cursor: "pointer",
-            //     ...XIconPosition,
-            //   }}
-            // >
-           
-            // </div> */}
+          //     zIndex: 1000000001,
+          //     width: "50px",
+          //     height: "50px",
+          //     background: "rgb(2 137 101)",
+          //     borderRadius: "50px",
+          //     position: "fixed",
+
+          //     userSelect: "none",
+          //     boxShadow: "0px 0px 10px 1px #CCC",
+          //     cursor: "pointer",
+          //     ...XIconPosition,
+          //   }}
+          // >
+
+          // </div> */}
           </div>
         )}
       </div>
@@ -1158,25 +1227,26 @@ export async function xFetch(
     url += `?${queryString}`;
   }
 
-  try {
-    const response = await fetch(url, {
-      headers: options.headers || {},
-      body: options.payload ? JSON.stringify(options.payload) : undefined,
-      method: options.method,
-      signal,
-    });
-    const data = await response.json();
+  return await fetch(url, {
+    headers: options.headers || {},
+    body: options.payload ? JSON.stringify(options.payload) : undefined,
+    method: options.method,
+    signal,
+  });
+  // const data = await response.json();
 
-    if (response.ok) {
-      return data; // Resolve with the data if the API call is successful
-    } else {
-      throw new Error(
-        data.message || "An error occurred while making the API call"
-      );
-    }
-  } catch (error) {
-    throw error; // Reject with the error if there's an issue with the API call
-  }
+  // if (response.ok) {
+  //   return data; // Resolve with the data if the API call is successful
+  // } else {
+  //
+  //   throw new Error(
+  //     JSON.stringify({
+  //       status: response.status,
+  //       statusText: response.statusText,
+  //       error: response.body,
+  //     })
+  //   );
+  // }
 }
 export const useXFetch = (
   url = "/",
@@ -1191,6 +1261,7 @@ export const useXFetch = (
   const [status, setStatus] = useState("");
   const [count, setCount] = useState(0);
   const [loadSilently, setLoadSilently] = useState(false);
+  const [statusCode, setStatusCode] = useState(0);
 
   const [controller, setController] = useState<any>(null);
   const cancel = () => {
@@ -1199,36 +1270,46 @@ export const useXFetch = (
   };
 
   useEffect(() => {
-    if (count > 0) {
-      if (controller) {
-        cancel();
-        setCount(count + 1);
-      } else {
-        !loadSilently && setIsLoading(true);
-        setError(null);
-        setData(null);
-        setStatus("loading");
-        const controller = new AbortController();
-        setController(controller);
-        xFetch(url, method, payload, qsObj, headers, controller.signal)
-          .then((data) => {
-            setData(data);
-            setStatus("success");
-            setError(null);
-          })
-          .catch((error) => {
-            if (error?.name !== "AbortError") {
-              setError(error);
-              setStatus("error");
-            }
-          })
-          .finally(() => {
-            setController(null);
-            setIsLoading(false);
-            setLoadSilently(false);
-          });
+    const doit = () => {
+      if (count > 0) {
+        if (controller) {
+          cancel();
+          setCount(count + 1);
+        } else {
+          !loadSilently && setIsLoading(true);
+          setError(null);
+
+          setStatus("loading");
+          const controller = new AbortController();
+          setController(controller);
+          xFetch(url, method, payload, qsObj, headers, controller.signal)
+            .then(async (response) => {
+              setStatusCode(response.status);
+              if (response.ok) {
+                setData(await response.json());
+                setStatus("success");
+                setError(null);
+              } else {
+                setError({
+                  body: await response.json(),
+                  message: "error occured",
+                });
+                setStatus("error");
+                setData(null);
+              }
+            })
+            .catch((error) => {
+              setError({ body: error, message: error?.message || "" });
+            })
+            .finally(() => {
+              setController(null);
+              setIsLoading(false);
+              setLoadSilently(false);
+            });
+        }
       }
-    }
+    };
+    doit();
   }, [count]);
   useEffect(() => {
     return () => {
@@ -1243,7 +1324,16 @@ export const useXFetch = (
     setLoadSilently(true);
   };
 
-  return { isLoading, data, error, status, call, cancel, callSilently };
+  return {
+    isLoading,
+    data,
+    error,
+    status,
+    call,
+    cancel,
+    callSilently,
+    statusCode,
+  };
 };
 
 type Status = "idle" | "loading" | "success" | "error";
@@ -1332,7 +1422,7 @@ export function useXForm<T>(Obj: T, validateForm: Function) {
   const setErrors = (fn: Function) => {
     typeof fn === "function" && fn();
     setCount(count + 1);
-    setE(errors);
+    setE({ ...errors });
   };
 
   return {
@@ -1384,139 +1474,43 @@ function resetPrimitiveValues(obj: any) {
   return obj;
 }
 
-// quick state
+// usePrimitive
 
 export function useQ<T>(val: T): {
   val: T;
-  set: (newVal_Or_Fn: Function | any) => void;
+  set: (newVal: T) => void;
+  setQ: (pathToObjectToChange: string, newVal: any) => void;
 } {
   const setState = (val: any) => {
-    if (typeof val === "function") {
-      val();
-      set({
-        ...state,
-      });
-    } else {
-      set({ ...state, val });
-    }
+    set({ ...state, val });
   };
   const [state, set] = useState({
     val,
     set: setState,
   });
   state.set = setState;
-  return state;
+  return {
+    ...state,
+    setQ: (pathToObjectToChange: string, newVal: any) => {
+      setStateX(
+        state,
+        pathToObjectToChange.split(".").slice(1).join("."),
+        newVal
+      );
+      setState(state.val);
+    },
+  };
 }
 
-// // Utility function to deep compare two objects by values
-// function compareByValues(objA: any, objB: any) {
-//   if (objA === objB) return true;
+export function xEvents<T extends string>(arr: T[]): Record<T, { name: T }> {
+  const result = {} as Record<T, { name: T }>;
 
-//   if (typeof objA !== "object" || typeof objB !== "object") return false;
+  for (const item of arr) {
+    result[item] = { name: item };
+  }
 
-//   const keysA = Object.keys(objA);
-//   const keysB = Object.keys(objB);
-
-//   if (keysA.length !== keysB.length) return false;
-
-//   for (const key of keysA) {
-//     if (!objB.hasOwnProperty(key) || !compareByValues(objA[key], objB[key]))
-//       return false;
-//   }
-
-//   return true;
-// }
-
-// function useXEffect(effect: any, dependencies: any) {
-//   const prevDependencies = useRef(JSON.parse(JSON.stringify(dependencies)));
-//   if (!compareByValues(prevDependencies.current, dependencies)) {
-//     // Dependencies have changed, execute the effect function
-//     effect();
-//     // Save a copy of the new dependencies
-//     prevDependencies.current = JSON.parse(JSON.stringify(dependencies));
-//   }
-// }
-
-// function useXMemo(effect: any, dependencies: any) {
-//   const prevDependencies = useRef(JSON.parse(JSON.stringify(dependencies)));
-//   if (!compareByValues(prevDependencies.current, dependencies)) {
-//     // Dependencies have changed, execute the effect function
-//     effect();
-//     // Save a copy of the new dependencies
-//     prevDependencies.current = JSON.parse(JSON.stringify(dependencies));
-//   }
-// }
-
-// export default useXEffect;
-// export interface IXEvent {
-//   eventName: string;
-//   trigger: Function;
-//   count: number;
-// }
-
-type ParamsToObject<T extends string[]> = {
-  [K in T[number]]: number;
-
-  // {
-  //   name: K;
-  //   trigger: Function;
-  // };
-};
-
-export function XEvents<T extends string[]>(
-  ...eventNames: T
-): ParamsToObject<T> {
-  const events: Partial<ParamsToObject<T>> = eventNames.reduce((a: any, b) => {
-    // let temp = {
-    //   name: b,
-    //   trigger() {
-    //     a[b] = { ...temp };
-    //   },
-    // };
-    a[b] = 0;
-    return a;
-  }, {});
-  return events as ParamsToObject<T>;
+  return result;
 }
-// export function triggerEvent() {}
-// export function useXEvent<T extends string[]>(
-//   ...eventNames: T
-// ): ParamsToObject<T> {
-//   const [events] = useState<Partial<ParamsToObject<T>>>(
-//     eventNames.reduce((a: any, b) => {
-//       a[b] = 0;
-//       return a;
-//     }, {})
-//   );
-
-//   return events as ParamsToObject<T>;
-//   //   trigger(eventName: T) {
-//   //     setEvents({
-//   //       ...events,
-//   //       [eventName as string]: events[eventName as string]++,
-//   //     });
-//   //     setCount(count + 1);
-//   //   },
-//   //   count,
-//   // };
-// }
-// export type TXEvent = {
-//   [key: string]: IXEvent;
-// };
-
-// export const useXEffect = (fn: () => void, eventsArray: any) => {
-//   useEffect(
-//     fn,
-//     eventsArray.map((event) => xRefs[])
-//   );
-// };
-
-// export const useXMemo = (fn: () => void, eventsArray:any) => {
-//   return useMemo(
-//     fn,
-//     eventsArray.map((event) => event.count)
-//   );
-// };
 
 export function usePagination(
   initialPage = 1,
@@ -1813,7 +1807,6 @@ interface UseObject<T> {
   getItem: (key: string) => T | undefined;
   removeItem: (key: string) => void;
   hasKey: (key: string) => boolean;
-  // hasValue: (value: T) => boolean;
   object: Record<string, T>;
   keys: string[];
 }
@@ -1843,10 +1836,6 @@ export function useObject<T>(
     return key in object;
   };
 
-  // const hasValue = (value: T) => {
-  //   return Object.values(object).includes(value);
-  // };
-
   const keys = Object.keys(object);
 
   return {
@@ -1854,10 +1843,31 @@ export function useObject<T>(
     getItem,
     removeItem,
     hasKey,
-    // hasValue,
     object,
     keys,
   };
 }
 
 export default useObject;
+
+function getMethodNames(obj: any): string[] {
+  const methodNames: string[] = [];
+
+  let prototype = obj;
+
+  while (prototype && prototype !== Object.prototype) {
+    const keys = Reflect.ownKeys(prototype);
+
+    keys.forEach((key) => {
+      const value = prototype[key];
+      if (typeof value === "function" && key !== "constructor") {
+        methodNames.push(key as string);
+      }
+    });
+
+    prototype = Object.getPrototypeOf(prototype);
+  }
+  console.log(methodNames);
+
+  return methodNames;
+}

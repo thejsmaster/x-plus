@@ -2,7 +2,7 @@
 
 ### Easy State Management
 
-**x-plus** is a library that makes the state management easy for react. it offers a custom hook called **useX** that takes a class as prop and returns an object whose properties are **state** , **set** and **stateChanged**. **state** is an instance to class thats passed. and **set** takes a function (usually a method of the **state**) that changes the state. **stateChanged** is a number that refers the number of times the state changed which can be used as dependency for useEffect or useMemo.
+**x-plus** is a library that makes the state management easy for react. it offers a custom hook called **useX** that takes a class as prop and returns an object whose properties are **state** , **set**. **state** is an instance to class thats passed. and **set** takes a function (usually a method of the **state**) that changes the state.
 
 ### Installation
 
