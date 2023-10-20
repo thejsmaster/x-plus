@@ -71,7 +71,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.useObject = exports.xFloat = exports.xInt = exports.useFloat = exports.useString = exports.useArray = exports.deepClone = exports.paginateArray = exports.hasScrollReachedTheEnd = exports.usePagination = exports.xEvents = exports.useQ = exports.useXForm = exports.hasNonEmptyValue = exports.useXAsync = exports.useXFetch = exports.xFetch = exports.XFetchConfig = exports.ValueRenderer = exports.UseXDevTools = exports.Treeview = exports.XPlusWrapper = exports.Switch = exports.StateView = exports.LabelRenderer = exports.ErrorBoundary = exports.ErrorComponent = exports.Collapsable = exports.setStateX = exports.buildActions = exports.useX = exports.useXOnAction = exports.findDiff = exports.getCallStack = exports.getListenerCount = exports.useXChannel = exports.postMessage = exports.x = exports.getX = exports.getParentState = exports.xConfig = exports.xRefs = void 0;
+exports.deepClone = exports.hasScrollReachedTheEnd = exports.usePagination = exports.xEvents = exports.useQ = exports.useXForm = exports.hasNonEmptyValue = exports.useXAsync = exports.useXFetch = exports.xFetch = exports.XFetchConfig = exports.ValueRenderer = exports.UseXDevTools = exports.Treeview = exports.XPlusWrapper = exports.Switch = exports.StateView = exports.LabelRenderer = exports.ErrorBoundary = exports.ErrorComponent = exports.Collapsable = exports.setStateX = exports.buildActions = exports.useX = exports.useXOnAction = exports.findDiff = exports.getCallStack = exports.getListenerCount = exports.useXChannel = exports.callSet = exports.postMessage = exports.x = exports.getX = exports.getParentState = exports.xConfig = exports.xRefs = void 0;
 var jsx_runtime_1 = require("react/jsx-runtime");
 var react_1 = require("react");
 require("./App.css");
@@ -86,6 +86,7 @@ var listeners = {
 };
 function getParentState(CL) {
     //
+    //@ts-ignore
     var label = CL.name;
     var item = exports.xRefs[label];
     if (!item) {
@@ -119,6 +120,15 @@ var postMessage = function (channelName) {
     });
 };
 exports.postMessage = postMessage;
+var callSet = function (label, fn) {
+    var _a;
+    var props = [];
+    for (var _i = 2; _i < arguments.length; _i++) {
+        props[_i - 2] = arguments[_i];
+    }
+    (_a = exports.xRefs[label]) === null || _a === void 0 ? void 0 : _a.renderer.apply(_a, __spreadArray([fn], props, false));
+};
+exports.callSet = callSet;
 var useXChannel = function (channelName, callback) {
     if (!channels[channelName]) {
         channels[channelName] = [];
@@ -487,9 +497,9 @@ var Collapsable = function (_a) {
     return exports.xRefs[label] ? ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsxs)("div", { style: {
                     padding: "12px 15px",
                     borderTop: "1px solid rgb(232 238 231)",
-                    borderLeft: !open ? "2px solid #CCC" : "2px solid rgb(2, 137, 101)",
+                    borderLeft: !open ? "4px solid #CCC" : "4px solid rgb(2, 137, 101)",
                     borderImage: "initial",
-                    background: "rgb(243 243 243)",
+                    background: "rgb(250 250 250)",
                     cursor: "pointer",
                     fontWeight: !open ? "normal" : 700,
                     color: "rgb(92 92 92)",
@@ -504,7 +514,7 @@ var Collapsable = function (_a) {
                             fontSize: "16px",
                         }, children: (0, jsx_runtime_1.jsx)("b", { children: label }) }), " ", !open && ((0, jsx_runtime_1.jsx)("b", { style: { float: "right", color: "green", fontSize: "small" }, children: exports.xRefs[label].index > 0 ? exports.xRefs[label].index : "" }))] }, label), open && ((0, jsx_runtime_1.jsx)("div", { style: {
                     padding: "10px 30px",
-                    background: "rgb(250 250 250)",
+                    background: "rgb(252, 252, 252)",
                     fontSize: "14px",
                     paddingBottom: "45px",
                 }, children: children }))] })) : ((0, jsx_runtime_1.jsx)(jsx_runtime_1.Fragment, {}));
@@ -713,17 +723,17 @@ var UseXDevTools = function (_a) {
                         width: "400px",
                         position: "fixed",
                         // background: "rgb(250,250,250)",
-                        background: "rgb(250, 250, 250)",
+                        background: "white",
                         transition: "right 0.2s ",
                         top: 0,
                         right: showTools ? "0px" : "-400px",
                         color: "#444",
                         overflow: "auto",
-                        boxShadow: " 0 0 4px 0px #b0d9d5",
+                        boxShadow: "rgb(202 204 204) 0px 0px 10px 0px",
                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
                     }, children: [(0, jsx_runtime_1.jsx)("div", { style: {
                                 textAlign: "center",
-                                background: "rgb(250, 250, 250)",
+                                background: "white)",
                                 borderLeft: "1px solid #CCC",
                                 padding: "10px",
                             }, children: (0, jsx_runtime_1.jsx)("span", { style: { fontWeight: "bold", fontSize: "18px" }, children: "x-plus Dev Tools" }) }), (0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: Object.keys(exports.xRefs).map(function (key) {
@@ -1166,12 +1176,6 @@ function hasScrollReachedTheEnd(event, reverse) {
     }
 }
 exports.hasScrollReachedTheEnd = hasScrollReachedTheEnd;
-function paginateArray(array, currentPage, itemsPerPage) {
-    var startIndex = (currentPage - 1) * itemsPerPage;
-    var endIndex = startIndex + itemsPerPage;
-    return array.slice(startIndex, endIndex);
-}
-exports.paginateArray = paginateArray;
 function deepClone(obj) {
     if (obj === null || typeof obj !== "object") {
         return obj;
@@ -1185,195 +1189,6 @@ function deepClone(obj) {
     }, {});
 }
 exports.deepClone = deepClone;
-function useArray(initialList) {
-    if (initialList === void 0) { initialList = []; }
-    var _a = (0, react_1.useState)(initialList), list = _a[0], setList = _a[1];
-    // Function to add an item to the list at a specific index or at the end if no index is provided
-    var updateItem = function (item, index) {
-        if (index === void 0) { index = list.length; }
-        if (index < 0 || index > list.length) {
-            throw new Error("Invalid index");
-        }
-        var updatedList = __spreadArray([], list, true);
-        updatedList.splice(index, 0, item);
-        setList(updatedList);
-    };
-    // Function to remove an item from the list at a specific index
-    var removeItem = function (index) {
-        if (index < 0 || index >= list.length) {
-            throw new Error("Invalid index");
-        }
-        var updatedList = __spreadArray([], list, true);
-        updatedList.splice(index, 1);
-        setList(updatedList);
-    };
-    return {
-        addItem: updateItem,
-        updateItem: updateItem,
-        removeItem: removeItem,
-        list: __spreadArray([], list, true), // Return a copy of the list to ensure immutability
-    };
-}
-exports.useArray = useArray;
-function useString(initialValue) {
-    if (initialValue === void 0) { initialValue = ""; }
-    var _a = (0, react_1.useState)(initialValue), val = _a[0], setVal = _a[1];
-    var isEmpty = function () {
-        return val !== "" && val !== null && val !== undefined;
-    };
-    var isNull = function () {
-        return val === null;
-    };
-    var isUndefined = function () {
-        return val === undefined;
-    };
-    var toInt = function () {
-        return parseInt(val);
-    };
-    var toFloat = function (precision) {
-        if (precision === void 0) { precision = 2; }
-        return parseFloat(val).toFixed(precision);
-    };
-    var toIntOrZero = function () {
-        return isNaN(parseInt(val)) ? 0 : parseInt(val);
-    };
-    var toFloatOrZero = function (precision) {
-        if (precision === void 0) { precision = 2; }
-        return isNaN(parseFloat(val))
-            ? parseFloat("0").toFixed(precision)
-            : parseFloat(val).toFixed(precision);
-    };
-    return {
-        val: val,
-        setVal: setVal,
-        isEmpty: isEmpty,
-        isNull: isNull,
-        isUndefined: isUndefined,
-        toInt: toInt,
-        toFloat: toFloat,
-        isNaN: isNaN,
-        toIntOrZero: toIntOrZero,
-        toFloatOrZero: toFloatOrZero,
-    };
-}
-exports.useString = useString;
-function useFloat(initialValue, precision) {
-    if (initialValue === void 0) { initialValue = 0; }
-    if (precision === void 0) { precision = 2; }
-    var _a = (0, react_1.useState)(parseFloat(initialValue.toString()).toFixed(precision)), val = _a[0], setValInternal = _a[1];
-    var setVal = function (newValue) {
-        var parsedValue = parseFloat(newValue);
-        if (isNaN(parsedValue)) {
-            setValInternal(parseFloat("0").toFixed(precision));
-        }
-        else {
-            setValInternal(parsedValue.toFixed(precision));
-        }
-    };
-    var sum = (0, react_1.useCallback)(function (value) {
-        setVal((parseFloat(val) + parseFloat(value)).toFixed(precision));
-    }, [val, precision]);
-    var subtract = (0, react_1.useCallback)(function (value) {
-        setVal((parseFloat(val) - parseFloat(value)).toFixed(precision));
-    }, [val, precision]);
-    var multiply = (0, react_1.useCallback)(function (value) {
-        setVal((parseFloat(val) * parseFloat(value)).toFixed(precision));
-    }, [val, precision]);
-    var divide = (0, react_1.useCallback)(function (value) {
-        if (parseFloat(value) === 0) {
-            setVal(parseFloat("0").toFixed(precision));
-        }
-        else {
-            setVal((parseFloat(val) / parseFloat(value)).toFixed(precision));
-        }
-    }, [val, precision]);
-    var toInt = function () {
-        return parseInt(val);
-    };
-    var toIntFloor = function () {
-        return Math.floor(parseFloat(val));
-    };
-    var toIntCeil = function () {
-        return Math.ceil(parseFloat(val));
-    };
-    var toIntRound = function () {
-        return Math.round(parseFloat(val));
-    };
-    return {
-        val: val,
-        sum: sum,
-        subtract: subtract,
-        multiply: multiply,
-        divide: divide,
-        setVal: setVal,
-        toInt: toInt,
-        toIntFloor: toIntFloor,
-        toIntCeil: toIntCeil,
-        toIntRound: toIntRound,
-    };
-}
-exports.useFloat = useFloat;
-function xInt(num) {
-    return {
-        sum: function (other) { return num + other; },
-        subtract: function (other) { return num - other; },
-        multiply: function (other) { return num * other; },
-    };
-}
-exports.xInt = xInt;
-function xFloat(num, precision) {
-    if (precision === void 0) { precision = 2; }
-    var roundedNum = parseFloat(num.toFixed(precision));
-    return {
-        sum: function (other) {
-            var result = roundedNum + other;
-            return parseFloat(result.toFixed(precision));
-        },
-        subtract: function (other) {
-            var result = roundedNum - other;
-            return parseFloat(result.toFixed(precision));
-        },
-        multiply: function (other) {
-            var result = roundedNum * other;
-            return parseFloat(result.toFixed(precision));
-        },
-    };
-}
-exports.xFloat = xFloat;
-function useObject(initialObject) {
-    if (initialObject === void 0) { initialObject = {}; }
-    var _a = (0, react_1.useState)(initialObject), object = _a[0], setObject = _a[1];
-    var setItem = function (key, value) {
-        setObject(function (prevObject) {
-            var _a;
-            return (__assign(__assign({}, prevObject), (_a = {}, _a[key] = value, _a)));
-        });
-    };
-    var getItem = function (key) {
-        return object[key];
-    };
-    var removeItem = function (key) {
-        setObject(function (prevObject) {
-            var updatedObject = __assign({}, prevObject);
-            delete updatedObject[key];
-            return updatedObject;
-        });
-    };
-    var hasKey = function (key) {
-        return key in object;
-    };
-    var keys = Object.keys(object);
-    return {
-        setItem: setItem,
-        getItem: getItem,
-        removeItem: removeItem,
-        hasKey: hasKey,
-        object: object,
-        keys: keys,
-    };
-}
-exports.useObject = useObject;
-exports.default = useObject;
 function getMethodNames(obj) {
     var methodNames = [];
     var prototype = obj;
