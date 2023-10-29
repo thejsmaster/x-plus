@@ -1,10 +1,4 @@
-import {
-  Component,
-  ReactNode,
-  useEffect,
-  useLayoutEffect,
-  useState,
-} from "react";
+import React, { Component, ReactNode, useEffect, useState } from "react";
 import "./App.css";
 export const xRefs: any = {};
 export const xConfig = {
@@ -25,11 +19,10 @@ export function getParentState<T>(CL: new () => T): {
   dispatch: (actionMethod: Function, ...propsToAction: any) => void;
   triggerEvent: (xEventobject: { name: string }) => void;
   xlog: (title: string, valueToLog: any) => void;
-  setX: (pathToObjectToUpdate: string, newVal: any) => void;
+  setX: (pathOfObjectToUpdate: string, newVal: any) => void;
 } {
   //
 
-  //@ts-ignore
   let label = CL.name;
 
   const item = xRefs[label];
@@ -68,7 +61,7 @@ export const postMessage = (channelName: string, ...props: any) => {
 };
 
 export const callSet = (label: string, fn: Function, ...props: any) => {
-  xRefs[label]?.renderer(fn, ...props);
+  xRefs[label]?.set(fn, ...props);
 };
 
 export const useXChannel = (
@@ -163,20 +156,24 @@ export function useXOnAction(fnCallback: Function, actions: Function[]) {
     }
   });
 }
+type actionType = <T extends (...args: any[]) => any>(
+  actionMethod: T,
+  ...args: Parameters<T>
+) => ReturnType<T>;
 
 export function useX<T extends Object>(
   CL: new () => T
 ): {
   state: T;
-  set: (actionMethod: Function, ...propsToAction: any) => void;
+  set: actionType;
   actions: MethodsOnly<T>;
   stateChanged: number;
   // onPlus: Function;
-  plus: (actionMethod: Function, ...propsToAction: any) => void;
-  dispatch: (actionMethod: Function, ...propsToAction: any) => void;
+  plus: actionType;
+  dispatch: actionType;
   triggerEvent: (xEventobject: { name: string }) => void;
   xlog: (title: string, valueToLog: any) => void;
-  setX: (pathToObjectToUpdate: string, newVal: any) => void;
+  setX: (pathOfObjectToUpdate: string, newVal: any) => void;
 } {
   const [count, setCount] = useState(0);
   useEffect(() => {
@@ -198,8 +195,8 @@ export function useX<T extends Object>(
         label,
         setLogs: [],
         index: 0,
-
         xlogs: [],
+        eventLogs: [],
       };
 
       //@ts-ignore
@@ -213,6 +210,7 @@ export function useX<T extends Object>(
     }
     xRefs[label].set = (fn: Function, ...props: any) => {
       const timeStart = Date.now();
+
       const copy = deepClone(xRefs[label].state);
       let errorOccured = false;
       let errorMessage = "";
@@ -255,17 +253,21 @@ export function useX<T extends Object>(
         });
 
         if (xConfig.enableDebugging) {
+          let payload = [...props].length > 0 ? props : undefined;
+          if ([...props].length > 0) payload = buildPayload(fn, [...props]);
           const log = {
             fileName: fname.split("?")[0],
             functionName: functionName || "Set",
             lineNumber,
             changeList,
-            props,
+            payload,
             index: xRefs[label].index + 1,
             name: fn.name || "",
             errorOccured,
             errorMessage,
             duration: Date.now() - timeStart + " ms",
+            at: formatTime(new Date()),
+            time: +new Date(),
           };
           xConfig.enableConsoleLogging &&
             console.log("useX - " + log.name, log);
@@ -273,10 +275,8 @@ export function useX<T extends Object>(
             console.log("useX - updated state", xRefs[label]?.state);
           xRefs[label].setLogs.unshift(log);
           xRefs[label].index++;
-          xRefs[label].setLogs.length > 10 && xRefs[label].setLogs.pop();
+          xRefs[label].setLogs.length > 15 && xRefs[label].setLogs.pop();
         }
-
-        console.timeEnd();
       };
       xRefs[label].state.onChange && xRefs[label].state.onChange();
       updateSet();
@@ -289,6 +289,9 @@ export function useX<T extends Object>(
       let state = xRefs[label].state;
       if (state.events?.[xEventobject?.name]) {
         state.events[xEventobject.name] = { ...xEventobject };
+        xRefs[label].eventLogs.unshift({
+          [xEventobject.name]: "triggered at " + formatTime(new Date()),
+        });
         setCount(count + 1);
       } else {
         throw Error(
@@ -298,7 +301,6 @@ export function useX<T extends Object>(
     };
     xRefs[label].setX = (pathOfObjectToUpdate: string, value: any) => {
       const timeStart = Date.now();
-
       let errorOccured = false;
       let errorMessage = "";
       try {
@@ -327,7 +329,8 @@ export function useX<T extends Object>(
           functionName: functionName || "SetX",
           lineNumber,
           changeList,
-          props: {},
+          payload: value,
+          at: formatTime(new Date()),
           index: xRefs[label].index + 1,
           name: "setX",
           errorOccured,
@@ -339,7 +342,7 @@ export function useX<T extends Object>(
           console.log("useX - updated state", xRefs[label]?.state);
         xRefs[label].setLogs.unshift(log);
         xRefs[label].index++;
-        xRefs[label].setLogs.length > 10 && xRefs[label].setLogs.pop();
+        xRefs[label].setLogs.length > 15 && xRefs[label].setLogs.pop();
       };
       xRefs[label].state.onChange && xRefs[label].state.onChange();
       xConfig.enableDebugging && updateSet();
@@ -359,7 +362,8 @@ export function useX<T extends Object>(
     // xRefs[label].actionEvents = xEvents(getMethodNames(xRefs[label].actions));
   };
   setAgain();
-  useLayoutEffect(() => {
+  useEffect(() => {
+    setAgain();
     if (mountRefsCount[label]) {
       throw Error(
         "Don't intialise useX " +
@@ -583,26 +587,26 @@ export const LabelRenderer = ({ label }: any) => {
       {label.endsWith("[M]") ? (
         <span title={"Modified"} style={{ color: "#bc7a00" }}>
           {/* <span
-            style={{ color: "#bc7a00", fontSize: "large", fontWeight: "bold" }}
-          >
-            *
-          </span>{" "} */}
+              style={{ color: "#bc7a00", fontSize: "large", fontWeight: "bold" }}
+            >
+              *
+            </span>{" "} */}
           {label.substr(0, label.length - 3)}{" "}
         </span>
       ) : label.endsWith("[A]") ? (
         <span title={"Added"} style={{ color: "green" }}>
           {/* <span
-            style={{ color: "green", fontSize: "large", fontWeight: "bold" }}
-          >
-            +
-          </span> */}
+              style={{ color: "green", fontSize: "large", fontWeight: "bold" }}
+            >
+              +
+            </span> */}
           {label.substr(0, label.length - 3)}{" "}
         </span>
       ) : label.endsWith("[D]") ? (
         <span title={"Deleted"} style={{ color: "#df0000" }}>
           {/* <span style={{ color: "red", fontSize: "large", fontWeight: "bold" }}>
-            -
-          </span> */}
+              -
+            </span> */}
           {label.substr(0, label.length - 3)}{" "}
         </span>
       ) : (
@@ -632,7 +636,7 @@ export const StateView = ({
 
 export const Switch = ({ State }: any) => {
   const [selectedTab, setSelectedTab] = useState<number>(0);
-  const tabs = ["State", "Set Logs", "Memos", "Logs"];
+  const tabs = ["State", "Dispatch Logs", "Events", "xLogs"];
   const [count, setCount] = useState(0);
 
   const spanStyle = (isSelected: boolean) => {
@@ -694,20 +698,56 @@ export const Switch = ({ State }: any) => {
         )}
 
         {State.setLogs?.map((log: any, index: number) => {
+          let lastone = State.setLogs[index - 1];
+          let timeDurationSinceLast = lastone ? lastone.time - log.time : 0;
+          let groupLog = false;
+          if (
+            lastone &&
+            timeDurationSinceLast < 2000 &&
+            lastone.functionName === log.functionName
+          ) {
+            groupLog = true;
+          }
           return (
             <div
               key={" set " + index + log.name}
               style={{
-                borderBottom: "1px solid #CCC",
+                // background: Timer(log.at) === "Just now" ? "#EEE" : "none",
+                borderTop:
+                  timeDurationSinceLast < 2000 || index == 0
+                    ? "none"
+                    : "1px solid #CCC",
                 marginBottom: "5px",
+                marginTop: groupLog ? "-10px" : "0px",
                 paddingBottom: "5px",
+
                 position: "relative",
               }}
             >
+              {!groupLog && (
+                <div style={{ textAlign: "center", marginTop: "10px" }}>
+                  <span
+                    style={{
+                      padding: "2px 5px",
+                      borderRadius: "5px",
+                      fontWeight: "bold",
+                      textAlign: "left",
+                      // background: "#EFEFEF",
+                    }}
+                  >
+                    {log.functionName}() - {log.fileName}
+                  </span>
+                  <span style={{ float: "right" }}>
+                    <TimeRenderer time={log.at} />
+                  </span>
+                </div>
+              )}
               <div
                 style={{
                   display: "inline-block",
+                  position: "relative",
                   verticalAlign: "top",
+                  width: "330px",
                 }}
               >
                 <StateView
@@ -716,49 +756,48 @@ export const Switch = ({ State }: any) => {
                     {
                       [log.name]: {
                         changes: log.changeList,
-                        props: log.props,
-                        "Triggered by": log.functionName,
-                        from: log.fileName,
-                        status: log.errorOccured
-                          ? "Error!" + log.errorMessage
-                          : "Success",
+                        payload: log.payload,
+                        // from: log.fileName,
+                        at: log.at,
                       },
                     } || {}
                   }
-                />
+                />{" "}
+                <div
+                  style={{ position: "absolute", top: "6px", right: "50px" }}
+                >
+                  ~ {log.duration}
+                </div>
+                <div
+                  style={{
+                    position: "absolute",
+                    textAlign: "center",
+                    marginTop: "10px",
+                    right: "5px",
+                    top: "-3px",
+                  }}
+                >
+                  {log.index}
+                </div>
+                <div
+                  title={
+                    log.errorOccured
+                      ? "check console for error deails"
+                      : "Success"
+                  }
+                  style={{
+                    position: "absolute",
+                    textAlign: "center",
+                    marginTop: "10px",
+                    right: "30px",
+                    top: "3px",
+                    borderRadius: "30px",
+                    width: "10px",
+                    height: "10px",
+                    background: log.errorOccured ? "red" : "green",
+                  }}
+                ></div>
               </div>
-              <div style={{ position: "absolute", top: "6px", right: "50px" }}>
-                {log.duration}
-              </div>
-              <div
-                style={{
-                  position: "absolute",
-                  textAlign: "center",
-                  marginTop: "10px",
-                  right: "5px",
-                  top: "-3px",
-                }}
-              >
-                {log.index}
-              </div>
-              <div
-                title={
-                  log.errorOccured
-                    ? "check console for error deails"
-                    : "Success"
-                }
-                style={{
-                  position: "absolute",
-                  textAlign: "center",
-                  marginTop: "10px",
-                  right: "30px",
-                  top: "3px",
-                  borderRadius: "30px",
-                  width: "10px",
-                  height: "10px",
-                  background: log.errorOccured ? "red" : "green",
-                }}
-              ></div>
             </div>
           );
         })}
@@ -766,9 +805,34 @@ export const Switch = ({ State }: any) => {
 
       <div style={{ marginTop: "10px" }}></div>
 
-      {/* <div style={{ display: selectedTab === 2 ? "block" : "none" }}>
-        <StateView state={State.state?.memos || {}} autoOpenFirstLevel={true} />{" "}
-      </div> */}
+      <div style={{ display: selectedTab === 2 ? "block" : "none" }}>
+        <div style={{ fontSize: "16px", fontWeight: "bold" }}>
+          Registered Events (
+          {State.state?.events ? Object.keys(State.state?.events).length : 0}){" "}
+          {":"}
+        </div>
+        <div style={{ paddingLeft: "10px", marginBottom: "10px" }}>
+          {State.state?.events &&
+            Object.keys(State.state?.events).map((item: any) => (
+              <div>
+                <b>{item}</b>
+              </div>
+            ))}
+        </div>
+        <div style={{ fontSize: "16px", fontWeight: "bold" }}>
+          Logs ({State.eventLogs.length.toString()}):
+        </div>
+        {State.eventLogs.map((item: any, i: number) => (
+          <div style={{ paddingLeft: "10px" }}>
+            <span>{State.eventLogs.length - i} </span>
+            <span style={{ display: "inline-block" }}>
+              {" "}
+              <StateView state={item} autoOpenFirstLevel={true} />
+            </span>
+          </div>
+        ))}
+      </div>
+
       <div style={{ display: selectedTab === 3 ? "block" : "none" }}>
         {State.xlogs.length > 0 && (
           <div style={{ textAlign: "right" }}>
@@ -793,6 +857,14 @@ export const Switch = ({ State }: any) => {
     </div>
   );
 };
+function formatTime(date: Date) {
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  const milliseconds = String(date.getMilliseconds()).padStart(3, "0");
+
+  return `${hours}:${minutes}:${seconds}:${milliseconds}`;
+}
 
 type TXDevToolsProps = {
   XIconPosition?: {
@@ -900,14 +972,24 @@ export const Treeview = ({ state, autoOpenFirstLevel = false }: any) => {
                   :{" "}
                   {Array.isArray(state[item]) ? (
                     <b>
-                      <i title="Array">
-                        {state[item].length > 0 ? " [..]" : " []"}
+                      <i
+                        title="Array"
+                        style={{ color: "#555", fontSize: "12px" }}
+                      >
+                        {state[item].length > 0
+                          ? buildObjectOrArrayPreview(state[item])
+                          : " []"}
                       </i>
                     </b>
                   ) : (
                     <b>
-                      <i title="Object">
-                        {Object.keys(state[item]).length > 0 ? " {..}" : " {}"}
+                      <i
+                        title="Object"
+                        style={{ color: "#555", fontSize: "12px" }}
+                      >
+                        {Object.keys(state[item]).length > 0
+                          ? buildObjectOrArrayPreview(state[item])
+                          : " {}"}
                       </i>
                     </b>
                   )}
@@ -976,7 +1058,8 @@ export const UseXDevTools = ({
           style={{
             zIndex: 1000000000,
             height: "100%",
-            width: "400px",
+            width: "420px",
+            maxWidth: "100%",
             position: "fixed",
             // background: "rgb(250,250,250)",
             background: "white",
@@ -1048,44 +1131,44 @@ export const UseXDevTools = ({
             }}
           >
             {/* <span
-              className={"usex-devtools-dots"}
-              style={{
-                borderRadius: "5px",
-                border: "1px solid white",
-                background: "white",
-                width: "5px",
-                height: "5px",
-                left: "21.5px",
-                top: "10px",
-                position: "absolute",
-              }}
-            ></span>
-            <span
-              className={"usex-devtools-dots"}
-              style={{
-                borderRadius: "5px",
-                border: "1px solid white",
-                background: "white",
-                width: "5px",
-                height: "5px",
-                left: "12px",
-                top: "30px",
-                position: "absolute",
-              }}
-            ></span>
-            <span
-              className={"usex-devtools-dots"}
-              style={{
-                borderRadius: "5px",
-                border: "1px solid white",
-                background: "white",
-                width: "5px",
-                height: "5px",
-                left: "32px",
-                top: "30px",
-                position: "absolute",
-              }}
-            ></span> */}
+                className={"usex-devtools-dots"}
+                style={{
+                  borderRadius: "5px",
+                  border: "1px solid white",
+                  background: "white",
+                  width: "5px",
+                  height: "5px",
+                  left: "21.5px",
+                  top: "10px",
+                  position: "absolute",
+                }}
+              ></span>
+              <span
+                className={"usex-devtools-dots"}
+                style={{
+                  borderRadius: "5px",
+                  border: "1px solid white",
+                  background: "white",
+                  width: "5px",
+                  height: "5px",
+                  left: "12px",
+                  top: "30px",
+                  position: "absolute",
+                }}
+              ></span>
+              <span
+                className={"usex-devtools-dots"}
+                style={{
+                  borderRadius: "5px",
+                  border: "1px solid white",
+                  background: "white",
+                  width: "5px",
+                  height: "5px",
+                  left: "32px",
+                  top: "30px",
+                  position: "absolute",
+                }}
+              ></span> */}
             <span
               style={{
                 left: "14px",
@@ -1112,21 +1195,21 @@ export const UseXDevTools = ({
               </span>
             </span>
             {/* //   style={{
-          //     zIndex: 1000000001,
-          //     width: "50px",
-          //     height: "50px",
-          //     background: "rgb(2 137 101)",
-          //     borderRadius: "50px",
-          //     position: "fixed",
-
-          //     userSelect: "none",
-          //     boxShadow: "0px 0px 10px 1px #CCC",
-          //     cursor: "pointer",
-          //     ...XIconPosition,
-          //   }}
-          // >
-
-          // </div> */}
+            //     zIndex: 1000000001,
+            //     width: "50px",
+            //     height: "50px",
+            //     background: "rgb(2 137 101)",
+            //     borderRadius: "50px",
+            //     position: "fixed",
+  
+            //     userSelect: "none",
+            //     boxShadow: "0px 0px 10px 1px #CCC",
+            //     cursor: "pointer",
+            //     ...XIconPosition,
+            //   }}
+            // >
+  
+            // </div> */}
           </div>
         )}
       </div>
@@ -1163,18 +1246,22 @@ export const ValueRenderer = ({ text }: any) => {
   return (
     <span
       title={text + ""}
-      style={{ ...highlightStyle, padding: "0px 5px", borderRadius: "4px" }}
+      style={{
+        ...highlightStyle,
+        padding: "0px 5px",
+        borderRadius: "4px",
+      }}
     >
       {text === null ? (
-        "null"
+        <span style={{ color: "orange" }}>null</span>
       ) : text === undefined ? (
-        "undefined"
+        <span style={{ color: "orange" }}>undefined</span>
       ) : typeof text === "function" ? (
         <b>Function</b>
       ) : text === "" ? (
         <i>''</i>
       ) : typeof text === "string" ? (
-        `'${text}'`
+        <span style={{ color: "#444" }}>{text}</span>
       ) : (
         (text + "").slice(0, 100) + "" + ((text + "").length > 100 ? "..." : "")
       )}
@@ -1550,7 +1637,20 @@ export function usePagination(
     resetPage,
   };
 }
-
+function TimeRenderer({ time }: any) {
+  const [count, setCount] = useState(0);
+  console.log("in timer");
+  useEffect(() => {
+    const clear = setInterval(() => {
+      setCount(count + 1);
+    }, 10000);
+    return () => {
+      console.log("in clean up");
+      clearInterval(clear);
+    };
+  }, [count]);
+  return <span>{Timer(time)}</span>;
+}
 export function hasScrollReachedTheEnd(event: any, reverse = false) {
   if (event.target === document) {
     // Document scroll
@@ -1626,7 +1726,116 @@ function getMethodNames(obj: any): string[] {
 
     prototype = Object.getPrototypeOf(prototype);
   }
-  console.log(methodNames);
 
   return methodNames;
+}
+
+function getFunctionParameterNames(func: Function) {
+  const functionString = func.toString();
+  const parameterList = functionString
+    .slice(functionString.indexOf("(") + 1, functionString.lastIndexOf(")"))
+    .split(",")
+    .map((param) => param.trim());
+
+  const namedParameters: any = [];
+  let isRestParameter = false;
+
+  for (const param of parameterList) {
+    if (param.startsWith("...")) {
+      // Handle rest parameter
+      const paramName = param.substring(3).trim();
+      isRestParameter = true;
+
+      // Add the rest parameter and exit the loop
+      namedParameters.push(`...${paramName}`);
+      break;
+    } else if (param.includes("{") || param.includes("[")) {
+      throw new Error("Destructuring or invalid parameter found");
+    } else {
+      // Handle named parameter
+      const defaultIndex = param.indexOf("=");
+      if (defaultIndex !== -1) {
+        // Handle default parameter
+        const paramName = param.substring(0, defaultIndex).trim();
+        namedParameters.push(paramName);
+      } else {
+        namedParameters.push(param);
+      }
+    }
+  }
+
+  if (isRestParameter) {
+    // If there's a rest parameter, return just that
+    return namedParameters;
+  } else {
+    // Return the named parameters
+    return namedParameters;
+  }
+}
+
+function objFromArray(keys: string[], values: any) {
+  if (keys.length > values.length) {
+    throw new Error("Keys array is longer than values array");
+  }
+
+  const result: any = {};
+
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+
+    if (key.startsWith("...")) {
+      const restKey = key.substring(3);
+      result[restKey] = values.slice(i);
+      break;
+    } else {
+      result[key] = values[i];
+    }
+  }
+
+  return result;
+}
+
+function buildPayload(fn: Function, props: any[]) {
+  try {
+    return objFromArray(getFunctionParameterNames(fn), props);
+  } catch (e) {
+    return props;
+  }
+}
+
+function buildObjectOrArrayPreview(obj: any) {
+  let val = Object.keys(obj).slice(0, 5).join(", ");
+  if (val.length > 10) val = val.substring(0, 15) + "...";
+  else if (Object.keys(obj).length > 4) {
+    val = val + "...";
+  }
+  return Array.isArray(obj) ? "[" + val + "]" : "{" + val + "}";
+}
+
+function Timer(targetTime: any) {
+  if (!targetTime || typeof targetTime !== "string") {
+    return "";
+  }
+  const now: any = new Date();
+  const target: any = new Date();
+  const [hh, mm, ss, ms] = targetTime.split(":").map(Number);
+
+  target.setHours(hh);
+  target.setMinutes(mm);
+  target.setSeconds(ss);
+  target.setMilliseconds(ms);
+
+  const timeDifference: any = now - target;
+
+  if (timeDifference < 2000) {
+    return "Just now";
+  } else if (timeDifference < 60000) {
+    const secondsAgo = Math.floor(timeDifference / 1000);
+    return `${secondsAgo} s ago`;
+  } else if (timeDifference < 3600000) {
+    const minutesAgo = Math.floor(timeDifference / 60000);
+    return `${minutesAgo} m ago`;
+  } else {
+    return targetTime;
+  }
 }

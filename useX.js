@@ -86,7 +86,6 @@ var listeners = {
 };
 function getParentState(CL) {
     //
-    //@ts-ignore
     var label = CL.name;
     var item = exports.xRefs[label];
     if (!item) {
@@ -126,7 +125,7 @@ var callSet = function (label, fn) {
     for (var _i = 2; _i < arguments.length; _i++) {
         props[_i - 2] = arguments[_i];
     }
-    (_a = exports.xRefs[label]) === null || _a === void 0 ? void 0 : _a.renderer.apply(_a, __spreadArray([fn], props, false));
+    (_a = exports.xRefs[label]) === null || _a === void 0 ? void 0 : _a.set.apply(_a, __spreadArray([fn], props, false));
 };
 exports.callSet = callSet;
 var useXChannel = function (channelName, callback) {
@@ -242,6 +241,7 @@ function useX(CL) {
                 setLogs: [],
                 index: 0,
                 xlogs: [],
+                eventLogs: [],
             };
             //@ts-ignore
             state && state.onChange && state.onChange();
@@ -297,17 +297,22 @@ function useX(CL) {
                     }
                 });
                 if (exports.xConfig.enableDebugging) {
+                    var payload = __spreadArray([], props, true).length > 0 ? props : undefined;
+                    if (__spreadArray([], props, true).length > 0)
+                        payload = buildPayload(fn, __spreadArray([], props, true));
                     var log = {
                         fileName: fname.split("?")[0],
                         functionName: functionName || "Set",
                         lineNumber: lineNumber,
                         changeList: changeList,
-                        props: props,
+                        payload: payload,
                         index: exports.xRefs[label].index + 1,
                         name: fn.name || "",
                         errorOccured: errorOccured,
                         errorMessage: errorMessage,
                         duration: Date.now() - timeStart + " ms",
+                        at: formatTime(new Date()),
+                        time: +new Date(),
                     };
                     exports.xConfig.enableConsoleLogging &&
                         console.log("useX - " + log.name, log);
@@ -315,9 +320,8 @@ function useX(CL) {
                         console.log("useX - updated state", (_a = exports.xRefs[label]) === null || _a === void 0 ? void 0 : _a.state);
                     exports.xRefs[label].setLogs.unshift(log);
                     exports.xRefs[label].index++;
-                    exports.xRefs[label].setLogs.length > 10 && exports.xRefs[label].setLogs.pop();
+                    exports.xRefs[label].setLogs.length > 15 && exports.xRefs[label].setLogs.pop();
                 }
-                console.timeEnd();
             };
             exports.xRefs[label].state.onChange && exports.xRefs[label].state.onChange();
             updateSet();
@@ -327,9 +331,13 @@ function useX(CL) {
         exports.xRefs[label].stateChanged = count;
         exports.xRefs[label].triggerEvent = function (xEventobject) {
             var _a;
+            var _b;
             var state = exports.xRefs[label].state;
-            if ((_a = state.events) === null || _a === void 0 ? void 0 : _a[xEventobject === null || xEventobject === void 0 ? void 0 : xEventobject.name]) {
+            if ((_b = state.events) === null || _b === void 0 ? void 0 : _b[xEventobject === null || xEventobject === void 0 ? void 0 : xEventobject.name]) {
                 state.events[xEventobject.name] = __assign({}, xEventobject);
+                exports.xRefs[label].eventLogs.unshift((_a = {},
+                    _a[xEventobject.name] = "triggered at " + formatTime(new Date()),
+                    _a));
                 setCount(count + 1);
             }
             else {
@@ -362,7 +370,8 @@ function useX(CL) {
                     functionName: functionName || "SetX",
                     lineNumber: lineNumber,
                     changeList: changeList,
-                    props: {},
+                    payload: value,
+                    at: formatTime(new Date()),
                     index: exports.xRefs[label].index + 1,
                     name: "setX",
                     errorOccured: errorOccured,
@@ -374,7 +383,7 @@ function useX(CL) {
                     console.log("useX - updated state", (_b = exports.xRefs[label]) === null || _b === void 0 ? void 0 : _b.state);
                 exports.xRefs[label].setLogs.unshift(log);
                 exports.xRefs[label].index++;
-                exports.xRefs[label].setLogs.length > 10 && exports.xRefs[label].setLogs.pop();
+                exports.xRefs[label].setLogs.length > 15 && exports.xRefs[label].setLogs.pop();
             };
             exports.xRefs[label].state.onChange && exports.xRefs[label].state.onChange();
             exports.xConfig.enableDebugging && updateSet();
@@ -394,7 +403,8 @@ function useX(CL) {
         // xRefs[label].actionEvents = xEvents(getMethodNames(xRefs[label].actions));
     };
     setAgain();
-    (0, react_1.useLayoutEffect)(function () {
+    (0, react_1.useEffect)(function () {
+        setAgain();
         if (mountRefsCount[label]) {
             throw Error("Don't intialise useX " +
                 label +
@@ -564,11 +574,11 @@ var StateView = function (_a) {
 };
 exports.StateView = StateView;
 var Switch = function (_a) {
-    var _b;
+    var _b, _c, _d, _e, _f;
     var State = _a.State;
-    var _c = (0, react_1.useState)(0), selectedTab = _c[0], setSelectedTab = _c[1];
-    var tabs = ["State", "Set Logs", "Memos", "Logs"];
-    var _d = (0, react_1.useState)(0), count = _d[0], setCount = _d[1];
+    var _g = (0, react_1.useState)(0), selectedTab = _g[0], setSelectedTab = _g[1];
+    var tabs = ["State", "Dispatch Logs", "Events", "xLogs"];
+    var _h = (0, react_1.useState)(0), count = _h[0], setCount = _h[1];
     var spanStyle = function (isSelected) {
         return {
             border: " 1px solid #DDD",
@@ -598,50 +608,75 @@ var Switch = function (_a) {
                                 setCount(count + 1);
                             }, children: (0, jsx_runtime_1.jsx)("i", { children: "Clear Logs" }) }) })), (_b = State.setLogs) === null || _b === void 0 ? void 0 : _b.map(function (log, index) {
                         var _a;
+                        var lastone = State.setLogs[index - 1];
+                        var timeDurationSinceLast = lastone ? lastone.time - log.time : 0;
+                        var groupLog = false;
+                        if (lastone &&
+                            timeDurationSinceLast < 2000 &&
+                            lastone.functionName === log.functionName) {
+                            groupLog = true;
+                        }
                         return ((0, jsx_runtime_1.jsxs)("div", { style: {
-                                borderBottom: "1px solid #CCC",
+                                // background: Timer(log.at) === "Just now" ? "#EEE" : "none",
+                                borderTop: timeDurationSinceLast < 2000 || index == 0
+                                    ? "none"
+                                    : "1px solid #CCC",
                                 marginBottom: "5px",
+                                marginTop: groupLog ? "-10px" : "0px",
                                 paddingBottom: "5px",
                                 position: "relative",
-                            }, children: [(0, jsx_runtime_1.jsx)("div", { style: {
+                            }, children: [!groupLog && ((0, jsx_runtime_1.jsxs)("div", { style: { textAlign: "center", marginTop: "10px" }, children: [(0, jsx_runtime_1.jsxs)("span", { style: {
+                                                padding: "2px 5px",
+                                                borderRadius: "5px",
+                                                fontWeight: "bold",
+                                                textAlign: "left",
+                                                // background: "#EFEFEF",
+                                            }, children: [log.functionName, "() - ", log.fileName] }), (0, jsx_runtime_1.jsx)("span", { style: { float: "right" }, children: (0, jsx_runtime_1.jsx)(TimeRenderer, { time: log.at }) })] })), (0, jsx_runtime_1.jsxs)("div", { style: {
                                         display: "inline-block",
+                                        position: "relative",
                                         verticalAlign: "top",
-                                    }, children: (0, jsx_runtime_1.jsx)(exports.StateView, { autoOpenFirstLevel: false, state: (_a = {},
-                                            _a[log.name] = {
-                                                changes: log.changeList,
-                                                props: log.props,
-                                                "Triggered by": log.functionName,
-                                                from: log.fileName,
-                                                status: log.errorOccured
-                                                    ? "Error!" + log.errorMessage
-                                                    : "Success",
-                                            },
-                                            _a) || {} }) }), (0, jsx_runtime_1.jsx)("div", { style: { position: "absolute", top: "6px", right: "50px" }, children: log.duration }), (0, jsx_runtime_1.jsx)("div", { style: {
-                                        position: "absolute",
-                                        textAlign: "center",
-                                        marginTop: "10px",
-                                        right: "5px",
-                                        top: "-3px",
-                                    }, children: log.index }), (0, jsx_runtime_1.jsx)("div", { title: log.errorOccured
-                                        ? "check console for error deails"
-                                        : "Success", style: {
-                                        position: "absolute",
-                                        textAlign: "center",
-                                        marginTop: "10px",
-                                        right: "30px",
-                                        top: "3px",
-                                        borderRadius: "30px",
-                                        width: "10px",
-                                        height: "10px",
-                                        background: log.errorOccured ? "red" : "green",
-                                    } })] }, " set " + index + log.name));
-                    })] }), (0, jsx_runtime_1.jsx)("div", { style: { marginTop: "10px" } }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 3 ? "block" : "none" }, children: [State.xlogs.length > 0 && ((0, jsx_runtime_1.jsx)("div", { style: { textAlign: "right" }, children: (0, jsx_runtime_1.jsx)("span", { style: { textDecoration: "underline", cursor: "pointer" }, onClick: function () {
+                                        width: "330px",
+                                    }, children: [(0, jsx_runtime_1.jsx)(exports.StateView, { autoOpenFirstLevel: false, state: (_a = {},
+                                                _a[log.name] = {
+                                                    changes: log.changeList,
+                                                    payload: log.payload,
+                                                    // from: log.fileName,
+                                                    at: log.at,
+                                                },
+                                                _a) || {} }), " ", (0, jsx_runtime_1.jsxs)("div", { style: { position: "absolute", top: "6px", right: "50px" }, children: ["~ ", log.duration] }), (0, jsx_runtime_1.jsx)("div", { style: {
+                                                position: "absolute",
+                                                textAlign: "center",
+                                                marginTop: "10px",
+                                                right: "5px",
+                                                top: "-3px",
+                                            }, children: log.index }), (0, jsx_runtime_1.jsx)("div", { title: log.errorOccured
+                                                ? "check console for error deails"
+                                                : "Success", style: {
+                                                position: "absolute",
+                                                textAlign: "center",
+                                                marginTop: "10px",
+                                                right: "30px",
+                                                top: "3px",
+                                                borderRadius: "30px",
+                                                width: "10px",
+                                                height: "10px",
+                                                background: log.errorOccured ? "red" : "green",
+                                            } })] })] }, " set " + index + log.name));
+                    })] }), (0, jsx_runtime_1.jsx)("div", { style: { marginTop: "10px" } }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 2 ? "block" : "none" }, children: [(0, jsx_runtime_1.jsxs)("div", { style: { fontSize: "16px", fontWeight: "bold" }, children: ["Registered Events (", ((_c = State.state) === null || _c === void 0 ? void 0 : _c.events) ? Object.keys((_d = State.state) === null || _d === void 0 ? void 0 : _d.events).length : 0, ")", " ", ":"] }), (0, jsx_runtime_1.jsx)("div", { style: { paddingLeft: "10px", marginBottom: "10px" }, children: ((_e = State.state) === null || _e === void 0 ? void 0 : _e.events) &&
+                            Object.keys((_f = State.state) === null || _f === void 0 ? void 0 : _f.events).map(function (item) { return ((0, jsx_runtime_1.jsx)("div", { children: (0, jsx_runtime_1.jsx)("b", { children: item }) })); }) }), (0, jsx_runtime_1.jsxs)("div", { style: { fontSize: "16px", fontWeight: "bold" }, children: ["Logs (", State.eventLogs.length.toString(), "):"] }), State.eventLogs.map(function (item, i) { return ((0, jsx_runtime_1.jsxs)("div", { style: { paddingLeft: "10px" }, children: [(0, jsx_runtime_1.jsxs)("span", { children: [State.eventLogs.length - i, " "] }), (0, jsx_runtime_1.jsxs)("span", { style: { display: "inline-block" }, children: [" ", (0, jsx_runtime_1.jsx)(exports.StateView, { state: item, autoOpenFirstLevel: true })] })] })); })] }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 3 ? "block" : "none" }, children: [State.xlogs.length > 0 && ((0, jsx_runtime_1.jsx)("div", { style: { textAlign: "right" }, children: (0, jsx_runtime_1.jsx)("span", { style: { textDecoration: "underline", cursor: "pointer" }, onClick: function () {
                                 State.xlogs = [];
                                 setCount(count + 1);
                             }, children: (0, jsx_runtime_1.jsx)("i", { children: "Clear Logs" }) }) })), " ", (State === null || State === void 0 ? void 0 : State.xlogs) &&
                         (State === null || State === void 0 ? void 0 : State.xlogs.map(function (log, i) { return ((0, jsx_runtime_1.jsx)("div", { children: (0, jsx_runtime_1.jsx)(exports.StateView, { state: log }) }, State.xlogs.length - i)); }))] })] }));
 };
 exports.Switch = Switch;
+function formatTime(date) {
+    var hours = String(date.getHours()).padStart(2, "0");
+    var minutes = String(date.getMinutes()).padStart(2, "0");
+    var seconds = String(date.getSeconds()).padStart(2, "0");
+    var milliseconds = String(date.getMilliseconds()).padStart(3, "0");
+    return "".concat(hours, ":").concat(minutes, ":").concat(seconds, ":").concat(milliseconds);
+}
 function XPlusWrapper(props) {
     var _a = props.enableDevTools, enableDevTools = _a === void 0 ? true : _a;
     return ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: props.children && props.children }), enableDevTools && ((0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)(exports.UseXDevTools, __assign({}, props)) }))] }));
@@ -684,7 +719,11 @@ var Treeview = function (_a) {
                                                         transition: "transform ease 0.2s",
                                                         marginRight: "0px",
                                                         fill: "#444",
-                                                    }, children: (0, jsx_runtime_1.jsx)("path", { d: "m80-160 400-640 400 640H80Z" }) }) }), (0, jsx_runtime_1.jsx)(exports.LabelRenderer, { label: item }), " "] }), ":", " ", Array.isArray(state[item]) ? ((0, jsx_runtime_1.jsx)("b", { children: (0, jsx_runtime_1.jsx)("i", { title: "Array", children: state[item].length > 0 ? " [..]" : " []" }) })) : ((0, jsx_runtime_1.jsx)("b", { children: (0, jsx_runtime_1.jsx)("i", { title: "Object", children: Object.keys(state[item]).length > 0 ? " {..}" : " {}" }) }))] }), openList.includes(item) &&
+                                                    }, children: (0, jsx_runtime_1.jsx)("path", { d: "m80-160 400-640 400 640H80Z" }) }) }), (0, jsx_runtime_1.jsx)(exports.LabelRenderer, { label: item }), " "] }), ":", " ", Array.isArray(state[item]) ? ((0, jsx_runtime_1.jsx)("b", { children: (0, jsx_runtime_1.jsx)("i", { title: "Array", style: { color: "#555", fontSize: "12px" }, children: state[item].length > 0
+                                                ? buildObjectOrArrayPreview(state[item])
+                                                : " []" }) })) : ((0, jsx_runtime_1.jsx)("b", { children: (0, jsx_runtime_1.jsx)("i", { title: "Object", style: { color: "#555", fontSize: "12px" }, children: Object.keys(state[item]).length > 0
+                                                ? buildObjectOrArrayPreview(state[item])
+                                                : " {}" }) }))] }), openList.includes(item) &&
                                 state[item] &&
                                 typeof state[item] === "object" && ((0, jsx_runtime_1.jsx)(exports.Treeview, { state: state[item] }))] }, i)) : ((0, jsx_runtime_1.jsxs)("div", { style: { marginTop: "3px", width: "auto" }, children: [(0, jsx_runtime_1.jsxs)("b", { style: { marginLeft: "10px" }, children: [(0, jsx_runtime_1.jsx)(exports.LabelRenderer, { label: item }), " "] }), ": ", (0, jsx_runtime_1.jsx)(exports.ValueRenderer, { text: state[item] })] }));
                 })] }) }));
@@ -720,7 +759,8 @@ var UseXDevTools = function (_a) {
     return ((0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsxs)("div", { id: "xplus-devtools-container", children: [" ", (0, jsx_runtime_1.jsxs)("div", { id: "usex-devtools", style: {
                         zIndex: 1000000000,
                         height: "100%",
-                        width: "400px",
+                        width: "420px",
+                        maxWidth: "100%",
                         position: "fixed",
                         // background: "rgb(250,250,250)",
                         background: "white",
@@ -785,7 +825,7 @@ var ValueRenderer = function (_a) {
             backgroundColor: "rgba(0, 255, 0, 0)",
             transition: "background-color 2s",
         };
-    return ((0, jsx_runtime_1.jsx)("span", { title: text + "", style: __assign(__assign({}, highlightStyle), { padding: "0px 5px", borderRadius: "4px" }), children: text === null ? ("null") : text === undefined ? ("undefined") : typeof text === "function" ? ((0, jsx_runtime_1.jsx)("b", { children: "Function" })) : text === "" ? ((0, jsx_runtime_1.jsx)("i", { children: "''" })) : typeof text === "string" ? ("'".concat(text, "'")) : ((text + "").slice(0, 100) + "" + ((text + "").length > 100 ? "..." : "")) }));
+    return ((0, jsx_runtime_1.jsx)("span", { title: text + "", style: __assign(__assign({}, highlightStyle), { padding: "0px 5px", borderRadius: "4px" }), children: text === null ? ((0, jsx_runtime_1.jsx)("span", { style: { color: "orange" }, children: "null" })) : text === undefined ? ((0, jsx_runtime_1.jsx)("span", { style: { color: "orange" }, children: "undefined" })) : typeof text === "function" ? ((0, jsx_runtime_1.jsx)("b", { children: "Function" })) : text === "" ? ((0, jsx_runtime_1.jsx)("i", { children: "''" })) : typeof text === "string" ? ((0, jsx_runtime_1.jsx)("span", { style: { color: "#444" }, children: text })) : ((text + "").slice(0, 100) + "" + ((text + "").length > 100 ? "..." : "")) }));
 };
 exports.ValueRenderer = ValueRenderer;
 exports.XFetchConfig = {
@@ -1135,6 +1175,21 @@ function usePagination(initialPage, initialTotalPages, initialItemsPerPage) {
     };
 }
 exports.usePagination = usePagination;
+function TimeRenderer(_a) {
+    var time = _a.time;
+    var _b = (0, react_1.useState)(0), count = _b[0], setCount = _b[1];
+    console.log("in timer");
+    (0, react_1.useEffect)(function () {
+        var clear = setInterval(function () {
+            setCount(count + 1);
+        }, 10000);
+        return function () {
+            console.log("in clean up");
+            clearInterval(clear);
+        };
+    }, [count]);
+    return (0, jsx_runtime_1.jsx)("span", { children: Timer(time) });
+}
 function hasScrollReachedTheEnd(event, reverse) {
     if (reverse === void 0) { reverse = false; }
     if (event.target === document) {
@@ -1202,6 +1257,110 @@ function getMethodNames(obj) {
         });
         prototype = Object.getPrototypeOf(prototype);
     }
-    console.log(methodNames);
     return methodNames;
+}
+function getFunctionParameterNames(func) {
+    var functionString = func.toString();
+    var parameterList = functionString
+        .slice(functionString.indexOf("(") + 1, functionString.lastIndexOf(")"))
+        .split(",")
+        .map(function (param) { return param.trim(); });
+    var namedParameters = [];
+    var isRestParameter = false;
+    for (var _i = 0, parameterList_1 = parameterList; _i < parameterList_1.length; _i++) {
+        var param = parameterList_1[_i];
+        if (param.startsWith("...")) {
+            // Handle rest parameter
+            var paramName = param.substring(3).trim();
+            isRestParameter = true;
+            // Add the rest parameter and exit the loop
+            namedParameters.push("...".concat(paramName));
+            break;
+        }
+        else if (param.includes("{") || param.includes("[")) {
+            throw new Error("Destructuring or invalid parameter found");
+        }
+        else {
+            // Handle named parameter
+            var defaultIndex = param.indexOf("=");
+            if (defaultIndex !== -1) {
+                // Handle default parameter
+                var paramName = param.substring(0, defaultIndex).trim();
+                namedParameters.push(paramName);
+            }
+            else {
+                namedParameters.push(param);
+            }
+        }
+    }
+    if (isRestParameter) {
+        // If there's a rest parameter, return just that
+        return namedParameters;
+    }
+    else {
+        // Return the named parameters
+        return namedParameters;
+    }
+}
+function objFromArray(keys, values) {
+    if (keys.length > values.length) {
+        throw new Error("Keys array is longer than values array");
+    }
+    var result = {};
+    for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        if (key.startsWith("...")) {
+            var restKey = key.substring(3);
+            result[restKey] = values.slice(i);
+            break;
+        }
+        else {
+            result[key] = values[i];
+        }
+    }
+    return result;
+}
+function buildPayload(fn, props) {
+    try {
+        return objFromArray(getFunctionParameterNames(fn), props);
+    }
+    catch (e) {
+        return props;
+    }
+}
+function buildObjectOrArrayPreview(obj) {
+    var val = Object.keys(obj).slice(0, 5).join(", ");
+    if (val.length > 10)
+        val = val.substring(0, 15) + "...";
+    else if (Object.keys(obj).length > 4) {
+        val = val + "...";
+    }
+    return Array.isArray(obj) ? "[" + val + "]" : "{" + val + "}";
+}
+function Timer(targetTime) {
+    if (!targetTime || typeof targetTime !== "string") {
+        return "";
+    }
+    var now = new Date();
+    var target = new Date();
+    var _a = targetTime.split(":").map(Number), hh = _a[0], mm = _a[1], ss = _a[2], ms = _a[3];
+    target.setHours(hh);
+    target.setMinutes(mm);
+    target.setSeconds(ss);
+    target.setMilliseconds(ms);
+    var timeDifference = now - target;
+    if (timeDifference < 2000) {
+        return "Just now";
+    }
+    else if (timeDifference < 60000) {
+        var secondsAgo = Math.floor(timeDifference / 1000);
+        return "".concat(secondsAgo, " s ago");
+    }
+    else if (timeDifference < 3600000) {
+        var minutesAgo = Math.floor(timeDifference / 60000);
+        return "".concat(minutesAgo, " m ago");
+    }
+    else {
+        return targetTime;
+    }
 }
