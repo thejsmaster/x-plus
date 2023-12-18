@@ -1,6 +1,7 @@
 import React, { Component, ReactNode, useEffect, useState } from "react";
 import "./App.css";
 export const xRefs: any = {};
+export const yRefs: any = {};
 export const xConfig = {
   enableDebugging: false,
   enableConsoleLogging: false,
@@ -9,16 +10,22 @@ export const xConfig = {
 const listeners: any = {
   onStateChange: null,
 };
-export function getParentState<T>(CL: new () => T): {
+export function getParentState<T, S>(
+  CL: new () => T,
+  Selectors?: new () => S
+): {
   state: T;
   set: (actionMethod: Function, ...propsToAction: any) => void;
   actions: MethodsOnly<T>;
+  name: string;
   stateChanged: number;
+  refs: any;
   // onPlus: Function;
   plus: (actionMethod: Function, ...propsToAction: any) => void;
   dispatch: (actionMethod: Function, ...propsToAction: any) => void;
   triggerEvent: (xEventobject: { name: string }) => void;
   xlog: (title: string, valueToLog: any) => void;
+  selectors: S;
   setX: (pathOfObjectToUpdate: string, newVal: any) => void;
 } {
   //
@@ -35,17 +42,22 @@ export function getParentState<T>(CL: new () => T): {
     state: item.state,
     set: item.set,
     plus: item.set,
+    name: item.label,
+    refs: item.refs,
     // onPlus: item.onPlus,
     stateChanged: item.count,
     actions: item.actions,
     dispatch: item.set,
+    selectors: item.selectors,
     triggerEvent: item.triggerEvent,
     xlog: item.log,
     setX: item.setX,
   };
 }
+
 export const getX = getParentState;
 export const x = getParentState;
+export const getParentX = getParentState;
 
 interface Channel {
   [key: string]: ((data: any) => void)[];
@@ -60,7 +72,7 @@ export const postMessage = (channelName: string, ...props: any) => {
   });
 };
 
-export const callSet = (label: string, fn: Function, ...props: any) => {
+export const dispatch = (label: string, fn: Function, ...props: any) => {
   xRefs[label]?.set(fn, ...props);
 };
 
@@ -117,6 +129,36 @@ export function getCallStack(splitIndex = 3) {
   };
 }
 
+// interface StateObject<T> {
+//   state: T;
+//   get<K extends keyof T>(key: K): T[K];
+//   set<K extends keyof T>(key: K, value: T[K]): void;
+// }
+
+// export function XCarrier<T extends Object>(
+//   classType: new () => T
+// ): StateObject<T> {
+//   const state: T = new classType();
+
+//   return {
+//     state: state,
+//     get<K extends keyof T>(key: K): T[K] {
+//       if (key in state) {
+//         return state[key];
+//       } else {
+//         throw new Error(`Key '${key.toString()}' does not exist in the state.`);
+//       }
+//     },
+//     set<K extends keyof T>(key: K, value: T[K]): void {
+//       if (key in state) {
+//         state[key] = value;
+//       } else {
+//         throw new Error(`Key '${key.toString()}' does not exist in the state.`);
+//       }
+//     },
+//   };
+// }
+
 export function findDiff(obj1: any, obj2: any, path = ""): Record<string, any> {
   const changes: Record<string, any> = {};
   if (
@@ -161,19 +203,23 @@ type actionType = <T extends (...args: any[]) => any>(
   ...args: Parameters<T>
 ) => ReturnType<T>;
 
-export function useX<T extends Object>(
-  CL: new () => T
+export function useX<T extends Object, S extends Object>(
+  CL: new () => T,
+  Selectors?: new () => S
 ): {
   state: T;
   set: actionType;
   actions: MethodsOnly<T>;
   stateChanged: number;
   // onPlus: Function;
+  refs: any;
   plus: actionType;
+  name: string;
   dispatch: actionType;
   triggerEvent: (xEventobject: { name: string }) => void;
   xlog: (title: string, valueToLog: any) => void;
   setX: (pathOfObjectToUpdate: string, newVal: any) => void;
+  selectors: S;
 } {
   const [count, setCount] = useState(0);
   useEffect(() => {
@@ -194,10 +240,12 @@ export function useX<T extends Object>(
         state,
         label,
         setLogs: [],
+        refs: {},
         index: 0,
         xlogs: [],
         eventLogs: [],
       };
+      xRefs[label].selectors = Selectors ? new Selectors() : {};
 
       //@ts-ignore
       state && state.onChange && state.onChange();
@@ -277,11 +325,11 @@ export function useX<T extends Object>(
           xRefs[label].index++;
           xRefs[label].setLogs.length > 15 && xRefs[label].setLogs.pop();
         }
+        Object.keys(changeList).length > 0 && setCount(count + 1);
       };
       xRefs[label].state.onChange && xRefs[label].state.onChange();
       updateSet();
       xRefs[label].state = { ...xRefs[label].state };
-      setCount(count + 1);
     };
 
     xRefs[label].stateChanged = count;
@@ -290,7 +338,8 @@ export function useX<T extends Object>(
       if (state.events?.[xEventobject?.name]) {
         state.events[xEventobject.name] = { ...xEventobject };
         xRefs[label].eventLogs.unshift({
-          [xEventobject.name]: "triggered at " + formatTime(new Date()),
+          [xEventobject.name]:
+            "triggered at " + formatTimeExtended(formatTime(new Date())),
         });
         setCount(count + 1);
       } else {
@@ -348,7 +397,7 @@ export function useX<T extends Object>(
       xConfig.enableDebugging && updateSet();
       xRefs[label].state = { ...xRefs[label].state };
 
-      setCount(count + 1);
+      pathOfObjectToUpdate && setCount(count + 1);
     };
     xRefs[label].xlog = (logName: string, logValue: any) => {
       if (xConfig.enableDebugging) {
@@ -387,13 +436,16 @@ export function useX<T extends Object>(
   return {
     state: xRefs[label].state,
     set: xRefs[label].set,
+    name: xRefs[label],
     dispatch: xRefs[label].set,
     actions: xRefs[label].actions,
     stateChanged: count,
     plus: xRefs[label].set,
+    refs: xRefs[label].refs,
     // onPlus: xRefs[label].onPlus,
     triggerEvent: xRefs[label].triggerEvent,
     xlog: xRefs[label].xlog,
+    selectors: xRefs[label].selectors,
     setX: xRefs[label].setX,
   };
 }
@@ -470,10 +522,10 @@ export function setStateX<T>(obj: T, path: string, value: any): T {
 
   return newObj;
 }
-export const Collapsable = ({ children, label }: any) => {
+export const Collapsable = ({ children, label, isUseXState = true }: any) => {
   const [open, setOpen] = useState(false);
 
-  return xRefs[label] ? (
+  return (
     <>
       <div
         key={label}
@@ -503,7 +555,7 @@ export const Collapsable = ({ children, label }: any) => {
         >
           <b>{label}</b>
         </span>{" "}
-        {!open && (
+        {!open && isUseXState && (
           <b style={{ float: "right", color: "green", fontSize: "small" }}>
             {xRefs[label].index > 0 ? xRefs[label].index : ""}
           </b>
@@ -522,8 +574,6 @@ export const Collapsable = ({ children, label }: any) => {
         </div>
       )}
     </>
-  ) : (
-    <></>
   );
 };
 
@@ -728,15 +778,18 @@ export const Switch = ({ State }: any) => {
                 <div style={{ textAlign: "center", marginTop: "10px" }}>
                   <span
                     style={{
+                      // backgroundColor: "#EEE",
                       padding: "2px 5px",
                       borderRadius: "5px",
                       fontWeight: "bold",
                       textAlign: "left",
+                      fontSize: "16px",
                       // background: "#EFEFEF",
                     }}
                   >
-                    {log.functionName}() - {log.fileName}
-                  </span>
+                    {log.functionName}()
+                  </span>{" "}
+                  <span style={{ color: "#777" }}></span>
                   <span style={{ float: "right" }}>
                     <TimeRenderer time={log.at} />
                   </span>
@@ -757,8 +810,8 @@ export const Switch = ({ State }: any) => {
                       [log.name]: {
                         changes: log.changeList,
                         payload: log.payload,
-                        // from: log.fileName,
-                        at: log.at,
+                        from: log.fileName,
+                        "triggered at": formatTimeExtended(log.at),
                       },
                     } || {}
                   }
@@ -857,6 +910,243 @@ export const Switch = ({ State }: any) => {
     </div>
   );
 };
+export const SwitchY = ({ State }: any) => {
+  debugger;
+  const [selectedTab, setSelectedTab] = useState<number>(0);
+  const tabs = ["data", "errors", "globalError", "logs"];
+  const [count, setCount] = useState(0);
+
+  const spanStyle = (isSelected: boolean) => {
+    return {
+      border: " 1px solid #DDD",
+      color: isSelected ? "white" : "#444",
+      padding: "3px 10px",
+      marginRight: "7px",
+      borderRadius: "7px",
+      background: isSelected ? "rgb(2 137 101)" : "none",
+      display: "inline-block",
+      verticalAlign: "top",
+      width: "auto",
+      textAlign: "center",
+      cursor: "pointer",
+    };
+  };
+
+  return (
+    <div style={{ textAlign: "left" }}>
+      <div
+        style={{
+          paddingBottom: "5px",
+          width: "100%",
+          margin: "0 auto",
+          marginBottom: "10px",
+          textAlign: "left",
+        }}
+      >
+        {tabs.map((item, i) => (
+          <span
+            key={i}
+            onMouseDown={() => setSelectedTab(i)}
+            //@ts-ignore
+            style={spanStyle(selectedTab === i)}
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+      <div style={{ display: selectedTab === 0 ? "block" : "none" }}>
+        <StateView state={State.data} />
+      </div>
+      <div style={{ display: selectedTab === 1 ? "block" : "none" }}>
+        <StateView state={State.errors} />
+      </div>
+      <div style={{ display: selectedTab === 2 ? "block" : "none" }}>
+        <div>{State.globalError}</div>
+      </div>
+
+      <div style={{ display: selectedTab === 3 ? "block" : "none" }}>
+        {State.logs.length > 0 && (
+          <div style={{ textAlign: "right" }}>
+            <span
+              style={{ textDecoration: "underline", cursor: "pointer" }}
+              onClick={() => {
+                State.logs = [];
+                // State.index = 0;
+                setCount(count + 1);
+              }}
+            >
+              <i>Clear Logs</i>
+            </span>
+          </div>
+        )}
+
+        {State.logs.map((log: any, index: number) => (
+          <div key={index}>
+            {" "}
+            <StateView state={log} />
+          </div>
+        ))}
+
+        {/* {State.logs?.map((log: any, index: number) => {
+          // let lastone = State.logs[index - 1];
+          // let timeDurationSinceLast = lastone ? lastone.time - log.time : 0;
+          // let groupLog = false;
+          // if (
+          //   lastone &&
+          //   timeDurationSinceLast < 2000 &&
+          //   lastone.functionName === log.functionName
+          // ) {
+          //   groupLog = true;
+          // }
+          return (
+            <div
+              key={" set " + index + log.name}
+              style={{
+                // background: Timer(log.at) === "Just now" ? "#EEE" : "none",
+                // borderTop:
+                //   timeDurationSinceLast < 2000 || index == 0
+                //     ? "none"
+                //     : "1px solid #CCC",
+                marginBottom: "5px",
+                // marginTop: groupLog ? "-10px" : "0px",
+                paddingBottom: "5px",
+
+                position: "relative",
+              }}
+            >
+              {!groupLog && (
+                <div style={{ textAlign: "center", marginTop: "10px" }}>
+                  <span
+                    style={{
+                      padding: "2px 5px",
+                      borderRadius: "5px",
+                      fontWeight: "bold",
+                      textAlign: "left",
+                      // background: "#EFEFEF",
+                    }}
+                  >
+                    {log.functionName}() - {log.fileName}
+                  </span>
+                  <span style={{ float: "right" }}>
+                    <TimeRenderer time={log.at} />
+                  </span>
+                </div>
+              )}
+              <div
+                style={{
+                  display: "inline-block",
+                  position: "relative",
+                  verticalAlign: "top",
+                  width: "330px",
+                }}
+              >
+                <StateView
+                  autoOpenFirstLevel={false}
+                  state={
+                    {
+                      [log.name]: {
+                        changes: log.changeList,
+                        payload: log.payload,
+                        // from: log.fileName,
+                        "triggered at": formatTimeExtended(log.at),
+                      },
+                    } || {}
+                  }
+                />{" "}
+                <div
+                  style={{ position: "absolute", top: "6px", right: "50px" }}
+                >
+                  ~ {log.duration}
+                </div>
+                <div
+                  style={{
+                    position: "absolute",
+                    textAlign: "center",
+                    marginTop: "10px",
+                    right: "5px",
+                    top: "-3px",
+                  }}
+                >
+                  {log.index}
+                </div>
+                <div
+                  title={
+                    log.errorOccured
+                      ? "check console for error deails"
+                      : "Success"
+                  }
+                  style={{
+                    position: "absolute",
+                    textAlign: "center",
+                    marginTop: "10px",
+                    right: "30px",
+                    top: "3px",
+                    borderRadius: "30px",
+                    width: "10px",
+                    height: "10px",
+                    background: log.errorOccured ? "red" : "green",
+                  }}
+                ></div>
+              </div>
+            </div>
+          );
+        })} */}
+      </div>
+
+      {/* <div style={{ marginTop: "10px" }}></div>
+
+      <div style={{ display: selectedTab === 2 ? "block" : "none" }}>
+        <div style={{ fontSize: "16px", fontWeight: "bold" }}>
+          Registered Events (
+          {State.state?.events ? Object.keys(State.state?.events).length : 0}){" "}
+          {":"}
+        </div>
+        <div style={{ paddingLeft: "10px", marginBottom: "10px" }}>
+          {State.state?.events &&
+            Object.keys(State.state?.events).map((item: any) => (
+              <div>
+                <b>{item}</b>
+              </div>
+            ))}
+        </div>
+        <div style={{ fontSize: "16px", fontWeight: "bold" }}>
+          Logs ({State.eventLogs.length.toString()}):
+        </div>
+        {State.eventLogs.map((item: any, i: number) => (
+          <div style={{ paddingLeft: "10px" }}>
+            <span>{State.eventLogs.length - i} </span>
+            <span style={{ display: "inline-block" }}>
+              {" "}
+              <StateView state={item} autoOpenFirstLevel={true} />
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: selectedTab === 3 ? "block" : "none" }}>
+        {State.xlogs.length > 0 && (
+          <div style={{ textAlign: "right" }}>
+            <span
+              style={{ textDecoration: "underline", cursor: "pointer" }}
+              onClick={() => {
+                State.xlogs = [];
+                setCount(count + 1);
+              }}
+            >
+              <i>Clear Logs</i>
+            </span>
+          </div>
+        )}{" "}
+        {State?.xlogs &&
+          State?.xlogs.map((log: any, i: number) => (
+            <div key={State.xlogs.length - i}>
+              <StateView state={log} />
+            </div>
+          ))}
+      </div> */}
+    </div>
+  );
+};
 function formatTime(date: Date) {
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
@@ -873,6 +1163,7 @@ type TXDevToolsProps = {
     top?: string;
     bottom?: string;
   };
+  keepOpen: boolean;
   enableConsoleLogging?: boolean;
   hideXPlusIcon?: boolean;
   enableDevTools?: boolean;
@@ -881,11 +1172,14 @@ type TXDevToolsProps = {
 };
 
 export function XPlusWrapper(props: TXDevToolsProps) {
-  const { enableDevTools = true } = props;
+  const { enableDevTools = true, keepOpen = false } = props;
   return (
     <>
       <ErrorBoundary Error={ErrorComponent}>
-        {props.children && props.children}
+        <div style={{ paddingRight: keepOpen ? "400px" : "0px" }}>
+          {" "}
+          {props.children && props.children}
+        </div>
       </ErrorBoundary>
       {enableDevTools && (
         <ErrorBoundary Error={ErrorComponent}>
@@ -1017,16 +1311,17 @@ export const Treeview = ({ state, autoOpenFirstLevel = false }: any) => {
 export const UseXDevTools = ({
   XIconPosition = { bottom: "50px", right: "50px" },
   enableConsoleLogging = false,
-
+  keepOpen = false,
   hideXPlusIcon = false,
   disableToggleESCKey = false,
 }: TXDevToolsProps) => {
-  const [showTools, setShowTools] = useState(false);
+  const [showTools, setShowTools] = useState(keepOpen || false);
   const [count, setCount] = useState(0);
+
   useEffect(() => {
     function handleKeyPress(event: any) {
       if (event.key === "Escape") {
-        setShowTools(!showTools);
+        setShowTools(keepOpen || !showTools);
       }
     }
 
@@ -1091,13 +1386,37 @@ export const UseXDevTools = ({
             {Object.keys(xRefs).map((key: any) => {
               const stateValue = xRefs[key];
               return stateValue ? (
-                <div key={key}>
-                  <Collapsable label={key} state={stateValue}>
-                    <ErrorBoundary Error={ErrorComponent}>
-                      <Switch State={stateValue} />
-                    </ErrorBoundary>
-                  </Collapsable>
-                </div>
+                <ErrorBoundary Error={ErrorComponent}>
+                  <div key={key}>
+                    <Collapsable label={key} state={stateValue}>
+                      <ErrorBoundary Error={ErrorComponent}>
+                        <Switch State={stateValue} />
+                      </ErrorBoundary>
+                    </Collapsable>
+                  </div>
+                </ErrorBoundary>
+              ) : (
+                <></>
+              );
+            })}
+          </ErrorBoundary>
+          <ErrorBoundary Error={ErrorComponent}>
+            {Object.keys(yRefs).map((key: any) => {
+              const stateValue = yRefs[key];
+              return stateValue ? (
+                <ErrorBoundary Error={ErrorComponent}>
+                  <div key={key}>
+                    <Collapsable
+                      label={key + " (Y)"}
+                      state={stateValue}
+                      isUseXState={false}
+                    >
+                      <ErrorBoundary Error={ErrorComponent}>
+                        <SwitchY State={stateValue} />
+                      </ErrorBoundary>
+                    </Collapsable>
+                  </div>
+                </ErrorBoundary>
               ) : (
                 <></>
               );
@@ -1114,7 +1433,7 @@ export const UseXDevTools = ({
         {!hideXPlusIcon && (
           <div
             onMouseDown={() => {
-              setShowTools(!showTools);
+              setShowTools(keepOpen || !showTools);
             }}
             id="usex-devtools-holder"
             style={{
@@ -1488,6 +1807,116 @@ export function hasNonEmptyValue(obj: any) {
   }
   return false;
 }
+type ValidationFunction<T> = (data: T, errors: T) => void;
+
+type YReturnType<T> = {
+  logs: any[];
+  data: T;
+  errors: T;
+  resetForm: (resetWith?: T) => void;
+  setData: (fn: () => void) => void;
+  setErrors: (fn: () => void) => void;
+  globalError: string;
+  setGlobalError: React.Dispatch<React.SetStateAction<string>>;
+  validate: () => boolean;
+  resetErrors: () => T;
+};
+
+export function useY<T>(
+  CL: new () => T,
+  validateForm: ValidationFunction<T>
+): YReturnType<T> {
+  const name = CL.name;
+  const [globalError, setGlobalError] = useState<string>("");
+
+  const [data, setD] = useState<T>(new CL());
+  const [showValidations, setShowValidations] = useState(false);
+
+  const resetErrors = (): T => {
+    return resetPrimitiveValues(deepClone(data));
+  };
+
+  const [errors, setE] = useState<T>(resetErrors());
+  const [count, setCount] = useState(0);
+
+  const setData = (fn: () => void) => {
+    const copy = deepClone(data);
+    typeof fn === "function" && fn();
+    const changeList = findDiff(copy, data);
+    const logs: any[] = yRefs[name].logs;
+
+    Object.keys(changeList).forEach((key: any) => {
+      logs.unshift({ [key]: changeList[key] });
+      if (logs.length > 20) {
+        logs.pop();
+      }
+    });
+
+    resetErrors();
+    showValidations && validateForm(data, errors);
+    if (hasNonEmptyValue(errors)) {
+    } else {
+      setShowValidations(false);
+    }
+
+    setCount(count + 1);
+
+    //@ts-ignore
+    setD(Array.isArray(data) ? [...data] : { ...data });
+  };
+
+  const setErrors = (fn: () => void) => {
+    typeof fn === "function" && fn();
+    setCount(count + 1);
+    setE({ ...errors });
+  };
+
+  if (!yRefs[name]) {
+    yRefs[name] = {
+      logs: [],
+    };
+  }
+
+  useEffect(() => {
+    return () => {
+      delete yRefs[name];
+    };
+  }, []);
+
+  yRefs[name] = {
+    ...yRefs[name],
+    data,
+    errors,
+    resetForm: (resetWith: T = new CL()) => {
+      setD(resetWith);
+      setTimeout(() => {
+        resetErrors();
+        setShowValidations(false);
+      }, 100);
+    },
+    setData,
+    setErrors,
+    globalError,
+    setGlobalError,
+    validate: (): boolean => {
+      validateForm(data, errors);
+      setShowValidations(true);
+      setCount(count + 1);
+
+      if (hasNonEmptyValue(errors)) {
+        return false;
+      } else {
+        return true;
+      }
+    },
+    resetErrors,
+  };
+  return yRefs[name];
+}
+
+export function getY<T>(CL: new () => T): YReturnType<T> {
+  return yRefs[CL.name];
+}
 
 export function useXForm<T>(Obj: T, validateForm: Function) {
   const [data, setD] = useState<T>(Obj);
@@ -1639,13 +2068,11 @@ export function usePagination(
 }
 function TimeRenderer({ time }: any) {
   const [count, setCount] = useState(0);
-  console.log("in timer");
   useEffect(() => {
     const clear = setInterval(() => {
       setCount(count + 1);
     }, 10000);
     return () => {
-      console.log("in clean up");
       clearInterval(clear);
     };
   }, [count]);
@@ -1839,3 +2266,40 @@ function Timer(targetTime: any) {
     return targetTime;
   }
 }
+
+function formatTimeExtended(timeString: string) {
+  const [hh, mm, ss, ms] = timeString.split(":").map(Number);
+  const date = new Date(); // Create a new Date object
+  date.setHours(hh);
+  date.setMinutes(mm);
+  date.setSeconds(ss);
+  date.setMilliseconds(ms);
+
+  let hours = date.getHours();
+  let minutes = date.getMinutes();
+  let seconds = date.getSeconds();
+  let milliseconds = date.getMilliseconds();
+
+  const amPm = hours >= 12 ? "pm" : "am";
+  if (hours > 12) {
+    hours -= 12;
+  } else if (hours === 0) {
+    hours = 12;
+  }
+
+  const formattedTime =
+    hours.toString().padStart(2, "0") +
+    ":" +
+    minutes.toString().padStart(2, "0") +
+    " " +
+    amPm +
+    ", " +
+    seconds.toString() +
+    "s, " +
+    milliseconds.toString() +
+    "ms";
+
+  return formattedTime;
+}
+
+/// useX(CL);
