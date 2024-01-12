@@ -13,21 +13,7 @@ const listeners: any = {
 export function getParentState<T, S>(
   CL: new () => T,
   Selectors?: new () => S
-): {
-  state: T;
-  set: (actionMethod: Function, ...propsToAction: any) => void;
-  actions: MethodsOnly<T>;
-  name: string;
-  stateChanged: number;
-  refs: any;
-  // onPlus: Function;
-  plus: (actionMethod: Function, ...propsToAction: any) => void;
-  dispatch: (actionMethod: Function, ...propsToAction: any) => void;
-  triggerEvent: (xEventobject: { name: string }) => void;
-  xlog: (title: string, valueToLog: any) => void;
-  selectors: S;
-  setX: (pathOfObjectToUpdate: string, newVal: any) => void;
-} {
+): TReturnVal<T, S> & T {
   //
 
   let label = CL.name;
@@ -39,24 +25,15 @@ export function getParentState<T, S>(
     );
   }
   return {
-    state: item.state,
-    set: item.set,
-    plus: item.set,
-    name: item.label,
-    refs: item.refs,
-    // onPlus: item.onPlus,
-    stateChanged: item.count,
-    actions: item.actions,
-    dispatch: item.set,
-    selectors: item.selectors,
     triggerEvent: item.triggerEvent,
     xlog: item.log,
     setX: item.setX,
+    ...item.state,
+    ...item.actions,
   };
 }
 
 export const getX = getParentState;
-export const x = getParentState;
 export const getParentX = getParentState;
 
 interface Channel {
@@ -203,24 +180,38 @@ type actionType = <T extends (...args: any[]) => any>(
   ...args: Parameters<T>
 ) => ReturnType<T>;
 
-export function useX<T extends Object, S extends Object>(
-  CL: new () => T,
-  Selectors?: new () => S
-): {
-  state: T;
-  set: actionType;
-  actions: MethodsOnly<T>;
-  stateChanged: number;
+type NonFunctionKeys<T> = {
+  [K in keyof T]: T[K] extends Function ? never : K;
+}[keyof T];
+
+type PropertiesOnly<T> = Pick<Readonly<T>, NonFunctionKeys<T>>;
+type DeepReadonly<T> = T extends Function
+  ? T
+  : T extends object
+  ? { readonly [K in keyof T]: DeepReadonly<T[K]> }
+  : T;
+
+type TReturnVal<T, S> = {
+  // state: Readonly<T>;
+  // set: actionType;
+  // data: PropertiesOnly<T>;
+  // actions: MethodsOnly<T>;
+  // stateChanged: number;
   // onPlus: Function;
-  refs: any;
-  plus: actionType;
-  name: string;
-  dispatch: actionType;
+  // refs: any;
+  // plus: actionType;
+  // name: string;
+  // dispatch: actionType;
   triggerEvent: (xEventobject: { name: string }) => void;
   xlog: (title: string, valueToLog: any) => void;
   setX: (pathOfObjectToUpdate: string, newVal: any) => void;
   selectors: S;
-} {
+};
+
+export function useX<T extends Object, S extends Object>(
+  CL: new () => T,
+  Selectors?: new () => S
+): TReturnVal<T, S> & T {
   const [count, setCount] = useState(0);
   useEffect(() => {
     if (count > 0) {
@@ -434,19 +425,21 @@ export function useX<T extends Object, S extends Object>(
 
   //
   return {
-    state: xRefs[label].state,
-    set: xRefs[label].set,
-    name: xRefs[label],
-    dispatch: xRefs[label].set,
-    actions: xRefs[label].actions,
-    stateChanged: count,
-    plus: xRefs[label].set,
-    refs: xRefs[label].refs,
-    // onPlus: xRefs[label].onPlus,
+    // state: xRefs[label].state,
+    // set: xRefs[label].set,
+    // name: xRefs[label],
+    // dispatch: xRefs[label].set,
+    // actions: xRefs[label].actions,
+    // stateChanged: count,
+    // plus: xRefs[label].set,
+    // refs: xRefs[label].refs,
+    // // onPlus: xRefs[label].onPlus,
     triggerEvent: xRefs[label].triggerEvent,
     xlog: xRefs[label].xlog,
     selectors: xRefs[label].selectors,
     setX: xRefs[label].setX,
+    ...xRefs[label].state,
+    ...xRefs[label].actions,
   };
 }
 
@@ -787,10 +780,10 @@ export const Switch = ({ State }: any) => {
                       // background: "#EFEFEF",
                     }}
                   >
-                    {log.functionName}()
+                    {/* {log.functionName}() */}
                   </span>{" "}
                   <span style={{ color: "#777" }}></span>
-                  <span style={{ float: "right" }}>
+                  <span style={{}}>
                     <TimeRenderer time={log.at} />
                   </span>
                 </div>

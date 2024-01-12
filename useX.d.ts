@@ -1,28 +1,17 @@
 import React, { Component, ReactNode } from "react";
 import "./App.css";
 export declare const xRefs: any;
+export declare const yRefs: any;
 export declare const xConfig: {
     enableDebugging: boolean;
     enableConsoleLogging: boolean;
     autoDestructureState: boolean;
 };
-export declare function getParentState<T>(CL: new () => T): {
-    state: T;
-    set: (actionMethod: Function, ...propsToAction: any) => void;
-    actions: MethodsOnly<T>;
-    stateChanged: number;
-    plus: (actionMethod: Function, ...propsToAction: any) => void;
-    dispatch: (actionMethod: Function, ...propsToAction: any) => void;
-    triggerEvent: (xEventobject: {
-        name: string;
-    }) => void;
-    xlog: (title: string, valueToLog: any) => void;
-    setX: (pathOfObjectToUpdate: string, newVal: any) => void;
-};
+export declare function getParentState<T, S>(CL: new () => T, Selectors?: new () => S): TReturnVal<T, S> & T;
 export declare const getX: typeof getParentState;
-export declare const x: typeof getParentState;
+export declare const getParentX: typeof getParentState;
 export declare const postMessage: (channelName: string, ...props: any) => void;
-export declare const callSet: (label: string, fn: Function, ...props: any) => void;
+export declare const dispatch: (label: string, fn: Function, ...props: any) => void;
 export declare const useXChannel: (channelName: string, callback?: (...props: any[]) => void) => (...props: any) => void;
 export declare const getListenerCount: (ChannelName: string) => number;
 export declare function getCallStack(splitIndex?: number): {
@@ -32,20 +21,15 @@ export declare function getCallStack(splitIndex?: number): {
 };
 export declare function findDiff(obj1: any, obj2: any, path?: string): Record<string, any>;
 export declare function useXOnAction(fnCallback: Function, actions: Function[]): void;
-type actionType = <T extends (...args: any[]) => any>(actionMethod: T, ...args: Parameters<T>) => ReturnType<T>;
-export declare function useX<T extends Object>(CL: new () => T): {
-    state: T;
-    set: actionType;
-    actions: MethodsOnly<T>;
-    stateChanged: number;
-    plus: actionType;
-    dispatch: actionType;
+type TReturnVal<T, S> = {
     triggerEvent: (xEventobject: {
         name: string;
     }) => void;
     xlog: (title: string, valueToLog: any) => void;
     setX: (pathOfObjectToUpdate: string, newVal: any) => void;
+    selectors: S;
 };
+export declare function useX<T extends Object, S extends Object>(CL: new () => T, Selectors?: new () => S): TReturnVal<T, S> & T;
 type MethodKeys<T> = {
     [K in keyof T]: T[K] extends (...args: any[]) => any ? K : never;
 }[keyof T];
@@ -54,7 +38,7 @@ export declare function buildActions<T>(label: string): {
     methods: MethodsOnly<T>;
 };
 export declare function setStateX<T>(obj: T, path: string, value: any): T;
-export declare const Collapsable: ({ children, label }: any) => import("react/jsx-runtime").JSX.Element;
+export declare const Collapsable: ({ children, label, isUseXState }: any) => import("react/jsx-runtime").JSX.Element;
 export declare const ErrorComponent: ({ Error, message }: any) => import("react/jsx-runtime").JSX.Element;
 interface ErrorBoundaryProps {
     Error: (error: Error, message: string) => ReactNode;
@@ -72,6 +56,7 @@ export declare class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
 export declare const LabelRenderer: ({ label }: any) => import("react/jsx-runtime").JSX.Element;
 export declare const StateView: ({ state, boldFont, autoOpenFirstLevel, }: any) => import("react/jsx-runtime").JSX.Element;
 export declare const Switch: ({ State }: any) => import("react/jsx-runtime").JSX.Element;
+export declare const SwitchY: ({ State }: any) => import("react/jsx-runtime").JSX.Element;
 type TXDevToolsProps = {
     XIconPosition?: {
         left?: string;
@@ -79,6 +64,7 @@ type TXDevToolsProps = {
         top?: string;
         bottom?: string;
     };
+    keepOpen: boolean;
     enableConsoleLogging?: boolean;
     hideXPlusIcon?: boolean;
     enableDevTools?: boolean;
@@ -87,7 +73,7 @@ type TXDevToolsProps = {
 };
 export declare function XPlusWrapper(props: TXDevToolsProps): import("react/jsx-runtime").JSX.Element;
 export declare const Treeview: ({ state, autoOpenFirstLevel }: any) => import("react/jsx-runtime").JSX.Element;
-export declare const UseXDevTools: ({ XIconPosition, enableConsoleLogging, hideXPlusIcon, disableToggleESCKey, }: TXDevToolsProps) => import("react/jsx-runtime").JSX.Element;
+export declare const UseXDevTools: ({ XIconPosition, enableConsoleLogging, keepOpen, hideXPlusIcon, disableToggleESCKey, }: TXDevToolsProps) => import("react/jsx-runtime").JSX.Element;
 export declare const ValueRenderer: ({ text }: any) => import("react/jsx-runtime").JSX.Element;
 export type RequestParamsType = {
     url: string;
@@ -120,6 +106,21 @@ interface AsyncHookResult {
 }
 export declare const useXAsync: (asyncFunction: (...args: any[]) => any) => AsyncHookResult;
 export declare function hasNonEmptyValue(obj: any): boolean;
+type ValidationFunction<T> = (data: T, errors: T) => void;
+type YReturnType<T> = {
+    logs: any[];
+    data: T;
+    errors: T;
+    resetForm: (resetWith?: T) => void;
+    setData: (fn: () => void) => void;
+    setErrors: (fn: () => void) => void;
+    globalError: string;
+    setGlobalError: React.Dispatch<React.SetStateAction<string>>;
+    validate: () => boolean;
+    resetErrors: () => T;
+};
+export declare function useY<T>(CL: new () => T, validateForm: ValidationFunction<T>): YReturnType<T>;
+export declare function getY<T>(CL: new () => T): YReturnType<T>;
 export declare function useXForm<T>(Obj: T, validateForm: Function): {
     data: T;
     errors: T;

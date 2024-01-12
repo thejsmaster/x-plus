@@ -71,11 +71,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deepClone = exports.hasScrollReachedTheEnd = exports.usePagination = exports.xEvents = exports.useQ = exports.useXForm = exports.hasNonEmptyValue = exports.useXAsync = exports.useXFetch = exports.xFetch = exports.XFetchConfig = exports.ValueRenderer = exports.UseXDevTools = exports.Treeview = exports.XPlusWrapper = exports.Switch = exports.StateView = exports.LabelRenderer = exports.ErrorBoundary = exports.ErrorComponent = exports.Collapsable = exports.setStateX = exports.buildActions = exports.useX = exports.useXOnAction = exports.findDiff = exports.getCallStack = exports.getListenerCount = exports.useXChannel = exports.callSet = exports.postMessage = exports.x = exports.getX = exports.getParentState = exports.xConfig = exports.xRefs = void 0;
+exports.deepClone = exports.hasScrollReachedTheEnd = exports.usePagination = exports.xEvents = exports.useQ = exports.useXForm = exports.getY = exports.useY = exports.hasNonEmptyValue = exports.useXAsync = exports.useXFetch = exports.xFetch = exports.XFetchConfig = exports.ValueRenderer = exports.UseXDevTools = exports.Treeview = exports.XPlusWrapper = exports.SwitchY = exports.Switch = exports.StateView = exports.LabelRenderer = exports.ErrorBoundary = exports.ErrorComponent = exports.Collapsable = exports.setStateX = exports.buildActions = exports.useX = exports.useXOnAction = exports.findDiff = exports.getCallStack = exports.getListenerCount = exports.useXChannel = exports.dispatch = exports.postMessage = exports.getParentX = exports.getX = exports.getParentState = exports.xConfig = exports.yRefs = exports.xRefs = void 0;
 var jsx_runtime_1 = require("react/jsx-runtime");
 var react_1 = require("react");
 require("./App.css");
 exports.xRefs = {};
+exports.yRefs = {};
 exports.xConfig = {
     enableDebugging: false,
     enableConsoleLogging: false,
@@ -84,29 +85,18 @@ exports.xConfig = {
 var listeners = {
     onStateChange: null,
 };
-function getParentState(CL) {
+function getParentState(CL, Selectors) {
     //
     var label = CL.name;
     var item = exports.xRefs[label];
     if (!item) {
         throw Error("Error Occured in getParentState. The requested state is not created by any of the parent components.");
     }
-    return {
-        state: item.state,
-        set: item.set,
-        plus: item.set,
-        // onPlus: item.onPlus,
-        stateChanged: item.count,
-        actions: item.actions,
-        dispatch: item.set,
-        triggerEvent: item.triggerEvent,
-        xlog: item.log,
-        setX: item.setX,
-    };
+    return __assign(__assign({ triggerEvent: item.triggerEvent, xlog: item.log, setX: item.setX }, item.state), item.actions);
 }
 exports.getParentState = getParentState;
 exports.getX = getParentState;
-exports.x = getParentState;
+exports.getParentX = getParentState;
 var channels = {};
 var postMessage = function (channelName) {
     var props = [];
@@ -119,7 +109,7 @@ var postMessage = function (channelName) {
     });
 };
 exports.postMessage = postMessage;
-var callSet = function (label, fn) {
+var dispatch = function (label, fn) {
     var _a;
     var props = [];
     for (var _i = 2; _i < arguments.length; _i++) {
@@ -127,7 +117,7 @@ var callSet = function (label, fn) {
     }
     (_a = exports.xRefs[label]) === null || _a === void 0 ? void 0 : _a.set.apply(_a, __spreadArray([fn], props, false));
 };
-exports.callSet = callSet;
+exports.dispatch = dispatch;
 var useXChannel = function (channelName, callback) {
     if (!channels[channelName]) {
         channels[channelName] = [];
@@ -182,6 +172,33 @@ function getCallStack(splitIndex) {
     };
 }
 exports.getCallStack = getCallStack;
+// interface StateObject<T> {
+//   state: T;
+//   get<K extends keyof T>(key: K): T[K];
+//   set<K extends keyof T>(key: K, value: T[K]): void;
+// }
+// export function XCarrier<T extends Object>(
+//   classType: new () => T
+// ): StateObject<T> {
+//   const state: T = new classType();
+//   return {
+//     state: state,
+//     get<K extends keyof T>(key: K): T[K] {
+//       if (key in state) {
+//         return state[key];
+//       } else {
+//         throw new Error(`Key '${key.toString()}' does not exist in the state.`);
+//       }
+//     },
+//     set<K extends keyof T>(key: K, value: T[K]): void {
+//       if (key in state) {
+//         state[key] = value;
+//       } else {
+//         throw new Error(`Key '${key.toString()}' does not exist in the state.`);
+//       }
+//     },
+//   };
+// }
 function findDiff(obj1, obj2, path) {
     if (path === void 0) { path = ""; }
     var changes = {};
@@ -221,7 +238,7 @@ function useXOnAction(fnCallback, actions) {
     });
 }
 exports.useXOnAction = useXOnAction;
-function useX(CL) {
+function useX(CL, Selectors) {
     var _a = (0, react_1.useState)(0), count = _a[0], setCount = _a[1];
     (0, react_1.useEffect)(function () {
         if (count > 0) {
@@ -239,10 +256,12 @@ function useX(CL) {
                 state: state,
                 label: label,
                 setLogs: [],
+                refs: {},
                 index: 0,
                 xlogs: [],
                 eventLogs: [],
             };
+            exports.xRefs[label].selectors = Selectors ? new Selectors() : {};
             //@ts-ignore
             state && state.onChange && state.onChange();
             exports.xRefs[label].actions = buildActions(label);
@@ -322,11 +341,11 @@ function useX(CL) {
                     exports.xRefs[label].index++;
                     exports.xRefs[label].setLogs.length > 15 && exports.xRefs[label].setLogs.pop();
                 }
+                Object.keys(changeList).length > 0 && setCount(count + 1);
             };
             exports.xRefs[label].state.onChange && exports.xRefs[label].state.onChange();
             updateSet();
             exports.xRefs[label].state = __assign({}, exports.xRefs[label].state);
-            setCount(count + 1);
         };
         exports.xRefs[label].stateChanged = count;
         exports.xRefs[label].triggerEvent = function (xEventobject) {
@@ -336,7 +355,7 @@ function useX(CL) {
             if ((_b = state.events) === null || _b === void 0 ? void 0 : _b[xEventobject === null || xEventobject === void 0 ? void 0 : xEventobject.name]) {
                 state.events[xEventobject.name] = __assign({}, xEventobject);
                 exports.xRefs[label].eventLogs.unshift((_a = {},
-                    _a[xEventobject.name] = "triggered at " + formatTime(new Date()),
+                    _a[xEventobject.name] = "triggered at " + formatTimeExtended(formatTime(new Date())),
                     _a));
                 setCount(count + 1);
             }
@@ -388,7 +407,7 @@ function useX(CL) {
             exports.xRefs[label].state.onChange && exports.xRefs[label].state.onChange();
             exports.xConfig.enableDebugging && updateSet();
             exports.xRefs[label].state = __assign({}, exports.xRefs[label].state);
-            setCount(count + 1);
+            pathOfObjectToUpdate && setCount(count + 1);
         };
         exports.xRefs[label].xlog = function (logName, logValue) {
             var _a;
@@ -423,18 +442,17 @@ function useX(CL) {
         };
     }, []);
     //
-    return {
-        state: exports.xRefs[label].state,
-        set: exports.xRefs[label].set,
-        dispatch: exports.xRefs[label].set,
-        actions: exports.xRefs[label].actions,
-        stateChanged: count,
-        plus: exports.xRefs[label].set,
-        // onPlus: xRefs[label].onPlus,
-        triggerEvent: exports.xRefs[label].triggerEvent,
-        xlog: exports.xRefs[label].xlog,
-        setX: exports.xRefs[label].setX,
-    };
+    return __assign(__assign({ 
+        // state: xRefs[label].state,
+        // set: xRefs[label].set,
+        // name: xRefs[label],
+        // dispatch: xRefs[label].set,
+        // actions: xRefs[label].actions,
+        // stateChanged: count,
+        // plus: xRefs[label].set,
+        // refs: xRefs[label].refs,
+        // // onPlus: xRefs[label].onPlus,
+        triggerEvent: exports.xRefs[label].triggerEvent, xlog: exports.xRefs[label].xlog, selectors: exports.xRefs[label].selectors, setX: exports.xRefs[label].setX }, exports.xRefs[label].state), exports.xRefs[label].actions);
 }
 exports.useX = useX;
 function buildActions(label) {
@@ -502,9 +520,9 @@ function setStateX(obj, path, value) {
 }
 exports.setStateX = setStateX;
 var Collapsable = function (_a) {
-    var children = _a.children, label = _a.label;
-    var _b = (0, react_1.useState)(false), open = _b[0], setOpen = _b[1];
-    return exports.xRefs[label] ? ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsxs)("div", { style: {
+    var children = _a.children, label = _a.label, _b = _a.isUseXState, isUseXState = _b === void 0 ? true : _b;
+    var _c = (0, react_1.useState)(false), open = _c[0], setOpen = _c[1];
+    return ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsxs)("div", { style: {
                     padding: "12px 15px",
                     borderTop: "1px solid rgb(232 238 231)",
                     borderLeft: !open ? "4px solid #CCC" : "4px solid rgb(2, 137, 101)",
@@ -522,12 +540,12 @@ var Collapsable = function (_a) {
                             display: "inline-block",
                             paddingLeft: "5px",
                             fontSize: "16px",
-                        }, children: (0, jsx_runtime_1.jsx)("b", { children: label }) }), " ", !open && ((0, jsx_runtime_1.jsx)("b", { style: { float: "right", color: "green", fontSize: "small" }, children: exports.xRefs[label].index > 0 ? exports.xRefs[label].index : "" }))] }, label), open && ((0, jsx_runtime_1.jsx)("div", { style: {
+                        }, children: (0, jsx_runtime_1.jsx)("b", { children: label }) }), " ", !open && isUseXState && ((0, jsx_runtime_1.jsx)("b", { style: { float: "right", color: "green", fontSize: "small" }, children: exports.xRefs[label].index > 0 ? exports.xRefs[label].index : "" }))] }, label), open && ((0, jsx_runtime_1.jsx)("div", { style: {
                     padding: "10px 30px",
                     background: "rgb(252, 252, 252)",
                     fontSize: "14px",
                     paddingBottom: "45px",
-                }, children: children }))] })) : ((0, jsx_runtime_1.jsx)(jsx_runtime_1.Fragment, {}));
+                }, children: children }))] }));
 };
 exports.Collapsable = Collapsable;
 var ErrorComponent = function (_a) {
@@ -625,13 +643,15 @@ var Switch = function (_a) {
                                 marginTop: groupLog ? "-10px" : "0px",
                                 paddingBottom: "5px",
                                 position: "relative",
-                            }, children: [!groupLog && ((0, jsx_runtime_1.jsxs)("div", { style: { textAlign: "center", marginTop: "10px" }, children: [(0, jsx_runtime_1.jsxs)("span", { style: {
+                            }, children: [!groupLog && ((0, jsx_runtime_1.jsxs)("div", { style: { textAlign: "center", marginTop: "10px" }, children: [(0, jsx_runtime_1.jsx)("span", { style: {
+                                                // backgroundColor: "#EEE",
                                                 padding: "2px 5px",
                                                 borderRadius: "5px",
                                                 fontWeight: "bold",
                                                 textAlign: "left",
+                                                fontSize: "16px",
                                                 // background: "#EFEFEF",
-                                            }, children: [log.functionName, "() - ", log.fileName] }), (0, jsx_runtime_1.jsx)("span", { style: { float: "right" }, children: (0, jsx_runtime_1.jsx)(TimeRenderer, { time: log.at }) })] })), (0, jsx_runtime_1.jsxs)("div", { style: {
+                                            } }), " ", (0, jsx_runtime_1.jsx)("span", { style: { color: "#777" } }), (0, jsx_runtime_1.jsx)("span", { style: {}, children: (0, jsx_runtime_1.jsx)(TimeRenderer, { time: log.at }) })] })), (0, jsx_runtime_1.jsxs)("div", { style: {
                                         display: "inline-block",
                                         position: "relative",
                                         verticalAlign: "top",
@@ -640,8 +660,8 @@ var Switch = function (_a) {
                                                 _a[log.name] = {
                                                     changes: log.changeList,
                                                     payload: log.payload,
-                                                    // from: log.fileName,
-                                                    at: log.at,
+                                                    from: log.fileName,
+                                                    "triggered at": formatTimeExtended(log.at),
                                                 },
                                                 _a) || {} }), " ", (0, jsx_runtime_1.jsxs)("div", { style: { position: "absolute", top: "6px", right: "50px" }, children: ["~ ", log.duration] }), (0, jsx_runtime_1.jsx)("div", { style: {
                                                 position: "absolute",
@@ -670,6 +690,42 @@ var Switch = function (_a) {
                         (State === null || State === void 0 ? void 0 : State.xlogs.map(function (log, i) { return ((0, jsx_runtime_1.jsx)("div", { children: (0, jsx_runtime_1.jsx)(exports.StateView, { state: log }) }, State.xlogs.length - i)); }))] })] }));
 };
 exports.Switch = Switch;
+var SwitchY = function (_a) {
+    var State = _a.State;
+    debugger;
+    var _b = (0, react_1.useState)(0), selectedTab = _b[0], setSelectedTab = _b[1];
+    var tabs = ["data", "errors", "globalError", "logs"];
+    var _c = (0, react_1.useState)(0), count = _c[0], setCount = _c[1];
+    var spanStyle = function (isSelected) {
+        return {
+            border: " 1px solid #DDD",
+            color: isSelected ? "white" : "#444",
+            padding: "3px 10px",
+            marginRight: "7px",
+            borderRadius: "7px",
+            background: isSelected ? "rgb(2 137 101)" : "none",
+            display: "inline-block",
+            verticalAlign: "top",
+            width: "auto",
+            textAlign: "center",
+            cursor: "pointer",
+        };
+    };
+    return ((0, jsx_runtime_1.jsxs)("div", { style: { textAlign: "left" }, children: [(0, jsx_runtime_1.jsx)("div", { style: {
+                    paddingBottom: "5px",
+                    width: "100%",
+                    margin: "0 auto",
+                    marginBottom: "10px",
+                    textAlign: "left",
+                }, children: tabs.map(function (item, i) { return ((0, jsx_runtime_1.jsx)("span", { onMouseDown: function () { return setSelectedTab(i); }, 
+                    //@ts-ignore
+                    style: spanStyle(selectedTab === i), children: item }, i)); }) }), (0, jsx_runtime_1.jsx)("div", { style: { display: selectedTab === 0 ? "block" : "none" }, children: (0, jsx_runtime_1.jsx)(exports.StateView, { state: State.data }) }), (0, jsx_runtime_1.jsx)("div", { style: { display: selectedTab === 1 ? "block" : "none" }, children: (0, jsx_runtime_1.jsx)(exports.StateView, { state: State.errors }) }), (0, jsx_runtime_1.jsx)("div", { style: { display: selectedTab === 2 ? "block" : "none" }, children: (0, jsx_runtime_1.jsx)("div", { children: State.globalError }) }), (0, jsx_runtime_1.jsxs)("div", { style: { display: selectedTab === 3 ? "block" : "none" }, children: [State.logs.length > 0 && ((0, jsx_runtime_1.jsx)("div", { style: { textAlign: "right" }, children: (0, jsx_runtime_1.jsx)("span", { style: { textDecoration: "underline", cursor: "pointer" }, onClick: function () {
+                                State.logs = [];
+                                // State.index = 0;
+                                setCount(count + 1);
+                            }, children: (0, jsx_runtime_1.jsx)("i", { children: "Clear Logs" }) }) })), State.logs.map(function (log, index) { return ((0, jsx_runtime_1.jsxs)("div", { children: [" ", (0, jsx_runtime_1.jsx)(exports.StateView, { state: log })] }, index)); })] })] }));
+};
+exports.SwitchY = SwitchY;
 function formatTime(date) {
     var hours = String(date.getHours()).padStart(2, "0");
     var minutes = String(date.getMinutes()).padStart(2, "0");
@@ -678,8 +734,8 @@ function formatTime(date) {
     return "".concat(hours, ":").concat(minutes, ":").concat(seconds, ":").concat(milliseconds);
 }
 function XPlusWrapper(props) {
-    var _a = props.enableDevTools, enableDevTools = _a === void 0 ? true : _a;
-    return ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: props.children && props.children }), enableDevTools && ((0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)(exports.UseXDevTools, __assign({}, props)) }))] }));
+    var _a = props.enableDevTools, enableDevTools = _a === void 0 ? true : _a, _b = props.keepOpen, keepOpen = _b === void 0 ? false : _b;
+    return ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsxs)("div", { style: { paddingRight: keepOpen ? "400px" : "0px" }, children: [" ", props.children && props.children] }) }), enableDevTools && ((0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)(exports.UseXDevTools, __assign({}, props)) }))] }));
 }
 exports.XPlusWrapper = XPlusWrapper;
 var Treeview = function (_a) {
@@ -730,13 +786,13 @@ var Treeview = function (_a) {
 };
 exports.Treeview = Treeview;
 var UseXDevTools = function (_a) {
-    var _b = _a.XIconPosition, XIconPosition = _b === void 0 ? { bottom: "50px", right: "50px" } : _b, _c = _a.enableConsoleLogging, enableConsoleLogging = _c === void 0 ? false : _c, _d = _a.hideXPlusIcon, hideXPlusIcon = _d === void 0 ? false : _d, _e = _a.disableToggleESCKey, disableToggleESCKey = _e === void 0 ? false : _e;
-    var _f = (0, react_1.useState)(false), showTools = _f[0], setShowTools = _f[1];
-    var _g = (0, react_1.useState)(0), count = _g[0], setCount = _g[1];
+    var _b = _a.XIconPosition, XIconPosition = _b === void 0 ? { bottom: "50px", right: "50px" } : _b, _c = _a.enableConsoleLogging, enableConsoleLogging = _c === void 0 ? false : _c, _d = _a.keepOpen, keepOpen = _d === void 0 ? false : _d, _e = _a.hideXPlusIcon, hideXPlusIcon = _e === void 0 ? false : _e, _f = _a.disableToggleESCKey, disableToggleESCKey = _f === void 0 ? false : _f;
+    var _g = (0, react_1.useState)(keepOpen || false), showTools = _g[0], setShowTools = _g[1];
+    var _h = (0, react_1.useState)(0), count = _h[0], setCount = _h[1];
     (0, react_1.useEffect)(function () {
         function handleKeyPress(event) {
             if (event.key === "Escape") {
-                setShowTools(!showTools);
+                setShowTools(keepOpen || !showTools);
             }
         }
         if (!disableToggleESCKey) {
@@ -778,9 +834,12 @@ var UseXDevTools = function (_a) {
                                 padding: "10px",
                             }, children: (0, jsx_runtime_1.jsx)("span", { style: { fontWeight: "bold", fontSize: "18px" }, children: "x-plus Dev Tools" }) }), (0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: Object.keys(exports.xRefs).map(function (key) {
                                 var stateValue = exports.xRefs[key];
-                                return stateValue ? ((0, jsx_runtime_1.jsx)("div", { children: (0, jsx_runtime_1.jsx)(exports.Collapsable, { label: key, state: stateValue, children: (0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)(exports.Switch, { State: stateValue }) }) }) }, key)) : ((0, jsx_runtime_1.jsx)(jsx_runtime_1.Fragment, {}));
+                                return stateValue ? ((0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)("div", { children: (0, jsx_runtime_1.jsx)(exports.Collapsable, { label: key, state: stateValue, children: (0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)(exports.Switch, { State: stateValue }) }) }) }, key) })) : ((0, jsx_runtime_1.jsx)(jsx_runtime_1.Fragment, {}));
+                            }) }), (0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: Object.keys(exports.yRefs).map(function (key) {
+                                var stateValue = exports.yRefs[key];
+                                return stateValue ? ((0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)("div", { children: (0, jsx_runtime_1.jsx)(exports.Collapsable, { label: key + " (Y)", state: stateValue, isUseXState: false, children: (0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)(exports.SwitchY, { State: stateValue }) }) }) }, key) })) : ((0, jsx_runtime_1.jsx)(jsx_runtime_1.Fragment, {}));
                             }) }), Object.keys(exports.xRefs).length === 0 && ((0, jsx_runtime_1.jsxs)("div", { style: { textAlign: "center", marginTop: "10px" }, children: [" ", (0, jsx_runtime_1.jsx)("i", { children: "No States are created using useX" })] }))] }), !hideXPlusIcon && ((0, jsx_runtime_1.jsx)("div", { onMouseDown: function () {
-                        setShowTools(!showTools);
+                        setShowTools(keepOpen || !showTools);
                     }, id: "usex-devtools-holder", style: __assign({ zIndex: 1000000001, width: "50px", height: "50px", 
                         //background: "#E74C3C",
                         background: "green", borderRadius: "50px", position: "fixed", boxShadow: "0px 0px 10px 1px #CCC", cursor: "pointer" }, XIconPosition), children: (0, jsx_runtime_1.jsxs)("span", { style: {
@@ -1047,6 +1106,79 @@ function hasNonEmptyValue(obj) {
     return false;
 }
 exports.hasNonEmptyValue = hasNonEmptyValue;
+function useY(CL, validateForm) {
+    var name = CL.name;
+    var _a = (0, react_1.useState)(""), globalError = _a[0], setGlobalError = _a[1];
+    var _b = (0, react_1.useState)(new CL()), data = _b[0], setD = _b[1];
+    var _c = (0, react_1.useState)(false), showValidations = _c[0], setShowValidations = _c[1];
+    var resetErrors = function () {
+        return resetPrimitiveValues(deepClone(data));
+    };
+    var _d = (0, react_1.useState)(resetErrors()), errors = _d[0], setE = _d[1];
+    var _e = (0, react_1.useState)(0), count = _e[0], setCount = _e[1];
+    var setData = function (fn) {
+        var copy = deepClone(data);
+        typeof fn === "function" && fn();
+        var changeList = findDiff(copy, data);
+        var logs = exports.yRefs[name].logs;
+        Object.keys(changeList).forEach(function (key) {
+            var _a;
+            logs.unshift((_a = {}, _a[key] = changeList[key], _a));
+            if (logs.length > 20) {
+                logs.pop();
+            }
+        });
+        resetErrors();
+        showValidations && validateForm(data, errors);
+        if (hasNonEmptyValue(errors)) {
+        }
+        else {
+            setShowValidations(false);
+        }
+        setCount(count + 1);
+        //@ts-ignore
+        setD(Array.isArray(data) ? __spreadArray([], data, true) : __assign({}, data));
+    };
+    var setErrors = function (fn) {
+        typeof fn === "function" && fn();
+        setCount(count + 1);
+        setE(__assign({}, errors));
+    };
+    if (!exports.yRefs[name]) {
+        exports.yRefs[name] = {
+            logs: [],
+        };
+    }
+    (0, react_1.useEffect)(function () {
+        return function () {
+            delete exports.yRefs[name];
+        };
+    }, []);
+    exports.yRefs[name] = __assign(__assign({}, exports.yRefs[name]), { data: data, errors: errors, resetForm: function (resetWith) {
+            if (resetWith === void 0) { resetWith = new CL(); }
+            setD(resetWith);
+            setTimeout(function () {
+                resetErrors();
+                setShowValidations(false);
+            }, 100);
+        }, setData: setData, setErrors: setErrors, globalError: globalError, setGlobalError: setGlobalError, validate: function () {
+            validateForm(data, errors);
+            setShowValidations(true);
+            setCount(count + 1);
+            if (hasNonEmptyValue(errors)) {
+                return false;
+            }
+            else {
+                return true;
+            }
+        }, resetErrors: resetErrors });
+    return exports.yRefs[name];
+}
+exports.useY = useY;
+function getY(CL) {
+    return exports.yRefs[CL.name];
+}
+exports.getY = getY;
 function useXForm(Obj, validateForm) {
     var _a = (0, react_1.useState)(Obj), data = _a[0], setD = _a[1];
     var _b = (0, react_1.useState)(false), showValidations = _b[0], setShowValidations = _b[1];
@@ -1178,13 +1310,11 @@ exports.usePagination = usePagination;
 function TimeRenderer(_a) {
     var time = _a.time;
     var _b = (0, react_1.useState)(0), count = _b[0], setCount = _b[1];
-    console.log("in timer");
     (0, react_1.useEffect)(function () {
         var clear = setInterval(function () {
             setCount(count + 1);
         }, 10000);
         return function () {
-            console.log("in clean up");
             clearInterval(clear);
         };
     }, [count]);
@@ -1363,4 +1493,34 @@ function Timer(targetTime) {
     else {
         return targetTime;
     }
+}
+function formatTimeExtended(timeString) {
+    var _a = timeString.split(":").map(Number), hh = _a[0], mm = _a[1], ss = _a[2], ms = _a[3];
+    var date = new Date(); // Create a new Date object
+    date.setHours(hh);
+    date.setMinutes(mm);
+    date.setSeconds(ss);
+    date.setMilliseconds(ms);
+    var hours = date.getHours();
+    var minutes = date.getMinutes();
+    var seconds = date.getSeconds();
+    var milliseconds = date.getMilliseconds();
+    var amPm = hours >= 12 ? "pm" : "am";
+    if (hours > 12) {
+        hours -= 12;
+    }
+    else if (hours === 0) {
+        hours = 12;
+    }
+    var formattedTime = hours.toString().padStart(2, "0") +
+        ":" +
+        minutes.toString().padStart(2, "0") +
+        " " +
+        amPm +
+        ", " +
+        seconds.toString() +
+        "s, " +
+        milliseconds.toString() +
+        "ms";
+    return formattedTime;
 }
