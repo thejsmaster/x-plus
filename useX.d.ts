@@ -21,15 +21,23 @@ export declare function getCallStack(splitIndex?: number): {
 };
 export declare function findDiff(obj1: any, obj2: any, path?: string): Record<string, any>;
 export declare function useXOnAction(fnCallback: Function, actions: Function[]): void;
+type NonFunctionKeys<T> = {
+    [K in keyof T]: T[K] extends Function ? never : K;
+}[keyof T];
+type PropertiesOnly<T> = Pick<Readonly<T>, NonFunctionKeys<T>>;
+type DeepReadonly<T> = T extends Function ? T : T extends object ? {
+    readonly [K in keyof T]: DeepReadonly<T[K]>;
+} : T;
 type TReturnVal<T, S> = {
+    setItem: (key: keyof PropertiesOnly<T>, newVal: any) => void;
     triggerEvent: (xEventobject: {
         name: string;
     }) => void;
     xlog: (title: string, valueToLog: any) => void;
-    setX: (pathOfObjectToUpdate: string, newVal: any) => void;
+    set: (pathOfObjectToUpdate: string, newVal: any) => void;
     selectors: S;
 };
-export declare function useX<T extends Object, S extends Object>(CL: new () => T, Selectors?: new () => S): TReturnVal<T, S> & T;
+export declare function useX<T extends Object, S extends Object>(CL: new () => T, Selectors?: new () => S): TReturnVal<T, S> & DeepReadonly<T>;
 type MethodKeys<T> = {
     [K in keyof T]: T[K] extends (...args: any[]) => any ? K : never;
 }[keyof T];
@@ -111,6 +119,8 @@ type YReturnType<T> = {
     logs: any[];
     data: T;
     errors: T;
+    set: (path: string, newVal: string) => void;
+    setItem: (key: keyof T, newVal: any) => void;
     resetForm: (resetWith?: T) => void;
     setData: (fn: () => void) => void;
     setErrors: (fn: () => void) => void;
@@ -119,17 +129,8 @@ type YReturnType<T> = {
     validate: () => boolean;
     resetErrors: () => T;
 };
-export declare function useY<T>(CL: new () => T, validateForm: ValidationFunction<T>): YReturnType<T>;
+export declare function useXForm<T>(CL: new () => T, validateForm: ValidationFunction<T>): YReturnType<T>;
 export declare function getY<T>(CL: new () => T): YReturnType<T>;
-export declare function useXForm<T>(Obj: T, validateForm: Function): {
-    data: T;
-    errors: T;
-    resetForm: (resetWith?: any) => void;
-    setData: (fn: Function) => void;
-    setErrors: (fn: Function) => void;
-    validate: () => boolean;
-    resetErrors: () => any;
-};
 export declare function useQ<T>(val: T): {
     val: T;
     set: (newVal: T) => void;

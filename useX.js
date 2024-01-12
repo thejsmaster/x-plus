@@ -71,7 +71,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deepClone = exports.hasScrollReachedTheEnd = exports.usePagination = exports.xEvents = exports.useQ = exports.useXForm = exports.getY = exports.useY = exports.hasNonEmptyValue = exports.useXAsync = exports.useXFetch = exports.xFetch = exports.XFetchConfig = exports.ValueRenderer = exports.UseXDevTools = exports.Treeview = exports.XPlusWrapper = exports.SwitchY = exports.Switch = exports.StateView = exports.LabelRenderer = exports.ErrorBoundary = exports.ErrorComponent = exports.Collapsable = exports.setStateX = exports.buildActions = exports.useX = exports.useXOnAction = exports.findDiff = exports.getCallStack = exports.getListenerCount = exports.useXChannel = exports.dispatch = exports.postMessage = exports.getParentX = exports.getX = exports.getParentState = exports.xConfig = exports.yRefs = exports.xRefs = void 0;
+exports.deepClone = exports.hasScrollReachedTheEnd = exports.usePagination = exports.xEvents = exports.useQ = exports.getY = exports.useXForm = exports.hasNonEmptyValue = exports.useXAsync = exports.useXFetch = exports.xFetch = exports.XFetchConfig = exports.ValueRenderer = exports.UseXDevTools = exports.Treeview = exports.XPlusWrapper = exports.SwitchY = exports.Switch = exports.StateView = exports.LabelRenderer = exports.ErrorBoundary = exports.ErrorComponent = exports.Collapsable = exports.setStateX = exports.buildActions = exports.useX = exports.useXOnAction = exports.findDiff = exports.getCallStack = exports.getListenerCount = exports.useXChannel = exports.dispatch = exports.postMessage = exports.getParentX = exports.getX = exports.getParentState = exports.xConfig = exports.yRefs = exports.xRefs = void 0;
 var jsx_runtime_1 = require("react/jsx-runtime");
 var react_1 = require("react");
 require("./App.css");
@@ -92,7 +92,7 @@ function getParentState(CL, Selectors) {
     if (!item) {
         throw Error("Error Occured in getParentState. The requested state is not created by any of the parent components.");
     }
-    return __assign(__assign({ triggerEvent: item.triggerEvent, xlog: item.log, setX: item.setX }, item.state), item.actions);
+    return __assign(__assign(__assign({}, item.state), item.actions), { set: item.dispatch, setItem: item.setItem, dispatch: item.dispatch, selectors: item.selectors, triggerEvent: item.triggerEvent, xlog: item.log });
 }
 exports.getParentState = getParentState;
 exports.getX = getParentState;
@@ -115,7 +115,7 @@ var dispatch = function (label, fn) {
     for (var _i = 2; _i < arguments.length; _i++) {
         props[_i - 2] = arguments[_i];
     }
-    (_a = exports.xRefs[label]) === null || _a === void 0 ? void 0 : _a.set.apply(_a, __spreadArray([fn], props, false));
+    (_a = exports.xRefs[label]) === null || _a === void 0 ? void 0 : _a.dispatch.apply(_a, __spreadArray([fn], props, false));
 };
 exports.dispatch = dispatch;
 var useXChannel = function (channelName, callback) {
@@ -155,7 +155,7 @@ var getListenerCount = function (ChannelName) {
 exports.getListenerCount = getListenerCount;
 function getCallStack(splitIndex) {
     var _a, _b, _c, _d, _e, _f, _g, _h;
-    if (splitIndex === void 0) { splitIndex = 3; }
+    if (splitIndex === void 0) { splitIndex = 4; }
     var stack = new Error().stack;
     var stackLines = ((_b = (_a = stack === null || stack === void 0 ? void 0 : stack.split("\n")[splitIndex]) === null || _a === void 0 ? void 0 : _a.trim()) === null || _b === void 0 ? void 0 : _b.split("(")) || [];
     var functionName = (stackLines === null || stackLines === void 0 ? void 0 : stackLines.length) > 1
@@ -271,7 +271,7 @@ function useX(CL, Selectors) {
         if (!exports.xRefs[label]) {
             intiate();
         }
-        exports.xRefs[label].set = function (fn) {
+        exports.xRefs[label].dispatch = function (fn) {
             var props = [];
             for (var _i = 1; _i < arguments.length; _i++) {
                 props[_i - 1] = arguments[_i];
@@ -316,6 +316,7 @@ function useX(CL, Selectors) {
                     }
                 });
                 if (exports.xConfig.enableDebugging) {
+                    debugger;
                     var payload = __spreadArray([], props, true).length > 0 ? props : undefined;
                     if (__spreadArray([], props, true).length > 0)
                         payload = buildPayload(fn, __spreadArray([], props, true));
@@ -363,13 +364,15 @@ function useX(CL, Selectors) {
                 throw Error("event is not declared on X Class. refer to the documentation on xEvents!");
             }
         };
-        exports.xRefs[label].setX = function (pathOfObjectToUpdate, value) {
+        exports.xRefs[label].set = function (pathOfObjectToUpdate, value, nameOfSetOperation, stackTraceIndex) {
+            if (nameOfSetOperation === void 0) { nameOfSetOperation = ""; }
+            if (stackTraceIndex === void 0) { stackTraceIndex = 4; }
             var timeStart = Date.now();
             var errorOccured = false;
             var errorMessage = "";
             try {
                 if (typeof pathOfObjectToUpdate === "string") {
-                    setStateX(exports.xRefs[label].state, pathOfObjectToUpdate.split(".").slice(1).join("."), value);
+                    setStateX(exports.xRefs[label].state, pathOfObjectToUpdate, value);
                 }
             }
             catch (e) {
@@ -380,19 +383,19 @@ function useX(CL, Selectors) {
             var updateSet = function () {
                 var _a;
                 var _b;
-                var _c = getCallStack(), fileName = _c.fileName, functionName = _c.functionName, lineNumber = _c.lineNumber;
+                var _c = getCallStack(stackTraceIndex), fileName = _c.fileName, functionName = _c.functionName, lineNumber = _c.lineNumber;
                 var fname = fileName.split("/")[fileName.split("/").length - 1];
                 var changeList = {};
                 changeList = (_a = {}, _a[pathOfObjectToUpdate] = value, _a);
                 var log = {
                     fileName: fname.split("?")[0],
-                    functionName: functionName || "SetX",
+                    functionName: functionName || "set",
                     lineNumber: lineNumber,
                     changeList: changeList,
                     payload: value,
                     at: formatTime(new Date()),
                     index: exports.xRefs[label].index + 1,
-                    name: "setX",
+                    name: nameOfSetOperation || "set",
                     errorOccured: errorOccured,
                     errorMessage: errorMessage,
                     duration: Date.now() - timeStart + " ms",
@@ -446,13 +449,15 @@ function useX(CL, Selectors) {
         // state: xRefs[label].state,
         // set: xRefs[label].set,
         // name: xRefs[label],
-        // dispatch: xRefs[label].set,
+        // dispatch: xRefs[label].dispatch,
         // actions: xRefs[label].actions,
         // stateChanged: count,
         // plus: xRefs[label].set,
         // refs: xRefs[label].refs,
         // // onPlus: xRefs[label].onPlus,
-        triggerEvent: exports.xRefs[label].triggerEvent, xlog: exports.xRefs[label].xlog, selectors: exports.xRefs[label].selectors, setX: exports.xRefs[label].setX }, exports.xRefs[label].state), exports.xRefs[label].actions);
+        triggerEvent: exports.xRefs[label].triggerEvent, xlog: exports.xRefs[label].xlog, setItem: function (key, newVal) {
+            exports.xRefs[label].set(key, newVal, "setItem", 5);
+        }, selectors: exports.xRefs[label].selectors, set: exports.xRefs[label].set }, exports.xRefs[label].state), exports.xRefs[label].actions);
 }
 exports.useX = useX;
 function buildActions(label) {
@@ -466,7 +471,7 @@ function buildActions(label) {
             for (var _i = 0; _i < arguments.length; _i++) {
                 props[_i] = arguments[_i];
             }
-            (_a = exports.xRefs[label]).set.apply(_a, __spreadArray([exports.xRefs[label].state[item]], props, false));
+            (_a = exports.xRefs[label]).dispatch.apply(_a, __spreadArray([exports.xRefs[label].state[item]], props, false));
         };
     });
     return actions;
@@ -660,6 +665,7 @@ var Switch = function (_a) {
                                                 _a[log.name] = {
                                                     changes: log.changeList,
                                                     payload: log.payload,
+                                                    "Called By": log.functionName,
                                                     from: log.fileName,
                                                     "triggered at": formatTimeExtended(log.at),
                                                 },
@@ -687,7 +693,7 @@ var Switch = function (_a) {
                                 State.xlogs = [];
                                 setCount(count + 1);
                             }, children: (0, jsx_runtime_1.jsx)("i", { children: "Clear Logs" }) }) })), " ", (State === null || State === void 0 ? void 0 : State.xlogs) &&
-                        (State === null || State === void 0 ? void 0 : State.xlogs.map(function (log, i) { return ((0, jsx_runtime_1.jsx)("div", { children: (0, jsx_runtime_1.jsx)(exports.StateView, { state: log }) }, State.xlogs.length - i)); }))] })] }));
+                        (State === null || State === void 0 ? void 0 : State.xlogs.map(function (log, i) { return ((0, jsx_runtime_1.jsx)("div", { style: { borderBottom: "1px solid #EEE" }, children: (0, jsx_runtime_1.jsx)(exports.StateView, { state: log }) }, State.xlogs.length - i)); }))] })] }));
 };
 exports.Switch = Switch;
 var SwitchY = function (_a) {
@@ -723,7 +729,7 @@ var SwitchY = function (_a) {
                                 State.logs = [];
                                 // State.index = 0;
                                 setCount(count + 1);
-                            }, children: (0, jsx_runtime_1.jsx)("i", { children: "Clear Logs" }) }) })), State.logs.map(function (log, index) { return ((0, jsx_runtime_1.jsxs)("div", { children: [" ", (0, jsx_runtime_1.jsx)(exports.StateView, { state: log })] }, index)); })] })] }));
+                            }, children: (0, jsx_runtime_1.jsx)("i", { children: "Clear Logs" }) }) })), State.logs.map(function (log, index) { return ((0, jsx_runtime_1.jsxs)("div", { style: { borderBottom: "1px solid #EEE" }, children: [" ", (0, jsx_runtime_1.jsx)(exports.StateView, { state: log })] }, index)); })] })] }));
 };
 exports.SwitchY = SwitchY;
 function formatTime(date) {
@@ -837,7 +843,7 @@ var UseXDevTools = function (_a) {
                                 return stateValue ? ((0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)("div", { children: (0, jsx_runtime_1.jsx)(exports.Collapsable, { label: key, state: stateValue, children: (0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)(exports.Switch, { State: stateValue }) }) }) }, key) })) : ((0, jsx_runtime_1.jsx)(jsx_runtime_1.Fragment, {}));
                             }) }), (0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: Object.keys(exports.yRefs).map(function (key) {
                                 var stateValue = exports.yRefs[key];
-                                return stateValue ? ((0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)("div", { children: (0, jsx_runtime_1.jsx)(exports.Collapsable, { label: key + " (Y)", state: stateValue, isUseXState: false, children: (0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)(exports.SwitchY, { State: stateValue }) }) }) }, key) })) : ((0, jsx_runtime_1.jsx)(jsx_runtime_1.Fragment, {}));
+                                return stateValue ? ((0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)("div", { children: (0, jsx_runtime_1.jsx)(exports.Collapsable, { label: key + " (XForm)", state: stateValue, isUseXState: false, children: (0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: (0, jsx_runtime_1.jsx)(exports.SwitchY, { State: stateValue }) }) }) }, key) })) : ((0, jsx_runtime_1.jsx)(jsx_runtime_1.Fragment, {}));
                             }) }), Object.keys(exports.xRefs).length === 0 && ((0, jsx_runtime_1.jsxs)("div", { style: { textAlign: "center", marginTop: "10px" }, children: [" ", (0, jsx_runtime_1.jsx)("i", { children: "No States are created using useX" })] }))] }), !hideXPlusIcon && ((0, jsx_runtime_1.jsx)("div", { onMouseDown: function () {
                         setShowTools(keepOpen || !showTools);
                     }, id: "usex-devtools-holder", style: __assign({ zIndex: 1000000001, width: "50px", height: "50px", 
@@ -1106,7 +1112,31 @@ function hasNonEmptyValue(obj) {
     return false;
 }
 exports.hasNonEmptyValue = hasNonEmptyValue;
-function useY(CL, validateForm) {
+// type Setters<T> = {
+//   [K in keyof T as `set${Capitalize<string & K>}`]: (val: any) => void;
+// };
+// function generateSetters<T>(props: new ()=> T, set: Function): Setters<T> {
+//   const setters: any = {};
+//   for (const key in props) {
+//     if (Object.prototype.hasOwnProperty.call(props, key)) {
+//       const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
+//       const setterName = `set${capitalizedKey}` as `set${Capitalize<
+//         string & typeof key
+//       >}`;
+//       setters[setterName] = (newVal: any) => {
+//         set(() => {
+//           props[key] = newVal;
+//         });
+//       };
+//     }
+//   }
+//   return setters as Setters<T>;
+// }
+// Example usage:
+/// set("a", 10);
+/// set();
+///
+function useXForm(CL, validateForm) {
     var name = CL.name;
     var _a = (0, react_1.useState)(""), globalError = _a[0], setGlobalError = _a[1];
     var _b = (0, react_1.useState)(new CL()), data = _b[0], setD = _b[1];
@@ -1161,7 +1191,15 @@ function useY(CL, validateForm) {
                 resetErrors();
                 setShowValidations(false);
             }, 100);
-        }, setData: setData, setErrors: setErrors, globalError: globalError, setGlobalError: setGlobalError, validate: function () {
+        }, setData: setData, setErrors: setErrors, globalError: globalError, setGlobalError: setGlobalError, set: function (path, newVal) {
+            setData(function () {
+                setStateX(data, path, newVal);
+            });
+        }, setItem: function (key, newVal) {
+            setData(function () {
+                data[key] = newVal;
+            });
+        }, validate: function () {
             validateForm(data, errors);
             setShowValidations(true);
             setCount(count + 1);
@@ -1174,64 +1212,60 @@ function useY(CL, validateForm) {
         }, resetErrors: resetErrors });
     return exports.yRefs[name];
 }
-exports.useY = useY;
+exports.useXForm = useXForm;
 function getY(CL) {
     return exports.yRefs[CL.name];
 }
 exports.getY = getY;
-function useXForm(Obj, validateForm) {
-    var _a = (0, react_1.useState)(Obj), data = _a[0], setD = _a[1];
-    var _b = (0, react_1.useState)(false), showValidations = _b[0], setShowValidations = _b[1];
-    var resetErrors = function () {
-        return resetPrimitiveValues(deepClone(data));
-    };
-    var _c = (0, react_1.useState)(resetErrors()), errors = _c[0], setE = _c[1];
-    var _d = (0, react_1.useState)(0), count = _d[0], setCount = _d[1];
-    var setData = function (fn) {
-        typeof fn === "function" && fn();
-        resetErrors();
-        showValidations && validateForm(data, errors);
-        if (hasNonEmptyValue(errors)) {
-        }
-        else {
-            setShowValidations(false);
-        }
-        setCount(count + 1);
-        //@ts-ignore
-        setD(Array.isArray(data) ? __spreadArray([], data, true) : __assign({}, data));
-    };
-    var setErrors = function (fn) {
-        typeof fn === "function" && fn();
-        setCount(count + 1);
-        setE(__assign({}, errors));
-    };
-    return {
-        data: data,
-        errors: errors,
-        resetForm: function (resetWith) {
-            if (resetWith === void 0) { resetWith = Obj; }
-            setD(resetWith);
-            setTimeout(function () { return resetErrors(); }, 100);
-        },
-        setData: setData,
-        // showErrors: showValidations,
-        // setShowErros: setShowValidations,
-        setErrors: setErrors,
-        validate: function () {
-            validateForm(data, errors);
-            setShowValidations(true);
-            setCount(count + 1);
-            if (hasNonEmptyValue(errors)) {
-                return false;
-            }
-            else {
-                return true;
-            }
-        },
-        resetErrors: resetErrors,
-    };
-}
-exports.useXForm = useXForm;
+// export function useXForm<T>(Obj: T, validateForm: Function) {
+//   const [data, setD] = useState<T>(Obj);
+//   const [showValidations, setShowValidations] = useState(false);
+//   const resetErrors = () => {
+//     return resetPrimitiveValues(deepClone(data));
+//   };
+//   const [errors, setE] = useState<T>(resetErrors());
+//   const [count, setCount] = useState(0);
+//   const setData = (fn: Function) => {
+//     typeof fn === "function" && fn();
+//     resetErrors();
+//     showValidations && validateForm(data, errors);
+//     if (hasNonEmptyValue(errors)) {
+//     } else {
+//       setShowValidations(false);
+//     }
+//     setCount(count + 1);
+//     //@ts-ignore
+//     setD(Array.isArray(data) ? [...data] : { ...data });
+//   };
+//   const setErrors = (fn: Function) => {
+//     typeof fn === "function" && fn();
+//     setCount(count + 1);
+//     setE({ ...errors });
+//   };
+//   return {
+//     data,
+//     errors,
+//     resetForm: (resetWith: any = Obj) => {
+//       setD(resetWith);
+//       setTimeout(() => resetErrors(), 100);
+//     },
+//     setData,
+//     // showErrors: showValidations,
+//     // setShowErros: setShowValidations,
+//     setErrors,
+//     validate: (): boolean => {
+//       validateForm(data, errors);
+//       setShowValidations(true);
+//       setCount(count + 1);
+//       if (hasNonEmptyValue(errors)) {
+//         return false;
+//       } else {
+//         return true;
+//       }
+//     },
+//     resetErrors,
+//   };
+// }
 function resetPrimitiveValues(obj) {
     // Base case: if obj is not an object, return an empty string
     if (typeof obj !== "object" || obj === null) {
@@ -1450,9 +1484,19 @@ function objFromArray(keys, values) {
     }
     return result;
 }
+// function buildFakePropsByIndex(length: number) {
+//   let t = [];
+//   for (let i = 1; i < length+1; i++) {
+//     t.push("prop" + i);
+//   }
+//   return t;
+// }
 function buildPayload(fn, props) {
     try {
-        return objFromArray(getFunctionParameterNames(fn), props);
+        var params = getFunctionParameterNames(fn);
+        return params.join("").trim().split("").length > 0
+            ? objFromArray(params, props)
+            : props;
     }
     catch (e) {
         return props;

@@ -25,11 +25,14 @@ export function getParentState<T, S>(
     );
   }
   return {
-    triggerEvent: item.triggerEvent,
-    xlog: item.log,
-    setX: item.setX,
     ...item.state,
     ...item.actions,
+    set: item.dispatch,
+    setItem: item.setItem,
+    dispatch: item.dispatch,
+    selectors: item.selectors,
+    triggerEvent: item.triggerEvent,
+    xlog: item.log,
   };
 }
 
@@ -50,7 +53,7 @@ export const postMessage = (channelName: string, ...props: any) => {
 };
 
 export const dispatch = (label: string, fn: Function, ...props: any) => {
-  xRefs[label]?.set(fn, ...props);
+  xRefs[label]?.dispatch(fn, ...props);
 };
 
 export const useXChannel = (
@@ -88,17 +91,21 @@ export const useXChannel = (
 export const getListenerCount = (ChannelName: string) => {
   return channels[ChannelName]?.length || 0;
 };
-export function getCallStack(splitIndex = 3) {
+export function getCallStack(splitIndex = 4) {
   const stack = new Error().stack;
+
   const stackLines = stack?.split("\n")[splitIndex]?.trim()?.split("(") || [];
+
   const functionName =
     stackLines?.length > 1
       ? stackLines?.[0]?.split(" ")[1].trim()
       : "Anonymous";
+
   const fileNameLineNumber = stackLines?.[stackLines?.length > 1 ? 1 : 0];
   const fileNames = fileNameLineNumber?.split("?")?.[0]?.split("/");
   const fileName = fileNames?.[fileNames?.length - 1];
   const lineNumber = fileNameLineNumber?.split("?")?.[1]?.split(":")?.[1];
+
   return {
     functionName,
     fileName,
@@ -184,6 +191,7 @@ type NonFunctionKeys<T> = {
   [K in keyof T]: T[K] extends Function ? never : K;
 }[keyof T];
 
+type Key<T> = keyof T;
 type PropertiesOnly<T> = Pick<Readonly<T>, NonFunctionKeys<T>>;
 type DeepReadonly<T> = T extends Function
   ? T
@@ -192,26 +200,17 @@ type DeepReadonly<T> = T extends Function
   : T;
 
 type TReturnVal<T, S> = {
-  // state: Readonly<T>;
-  // set: actionType;
-  // data: PropertiesOnly<T>;
-  // actions: MethodsOnly<T>;
-  // stateChanged: number;
-  // onPlus: Function;
-  // refs: any;
-  // plus: actionType;
-  // name: string;
-  // dispatch: actionType;
+  setItem: (key: keyof PropertiesOnly<T>, newVal: any) => void;
   triggerEvent: (xEventobject: { name: string }) => void;
   xlog: (title: string, valueToLog: any) => void;
-  setX: (pathOfObjectToUpdate: string, newVal: any) => void;
+  set: (pathOfObjectToUpdate: string, newVal: any) => void;
   selectors: S;
 };
 
 export function useX<T extends Object, S extends Object>(
   CL: new () => T,
   Selectors?: new () => S
-): TReturnVal<T, S> & T {
+): TReturnVal<T, S> & DeepReadonly<T> {
   const [count, setCount] = useState(0);
   useEffect(() => {
     if (count > 0) {
@@ -247,7 +246,7 @@ export function useX<T extends Object, S extends Object>(
     if (!xRefs[label]) {
       intiate();
     }
-    xRefs[label].set = (fn: Function, ...props: any) => {
+    xRefs[label].dispatch = (fn: Function, ...props: any) => {
       const timeStart = Date.now();
 
       const copy = deepClone(xRefs[label].state);
@@ -292,6 +291,7 @@ export function useX<T extends Object, S extends Object>(
         });
 
         if (xConfig.enableDebugging) {
+          debugger;
           let payload = [...props].length > 0 ? props : undefined;
           if ([...props].length > 0) payload = buildPayload(fn, [...props]);
           const log = {
@@ -339,17 +339,18 @@ export function useX<T extends Object, S extends Object>(
         );
       }
     };
-    xRefs[label].setX = (pathOfObjectToUpdate: string, value: any) => {
+    xRefs[label].set = (
+      pathOfObjectToUpdate: string,
+      value: any,
+      nameOfSetOperation: string = "",
+      stackTraceIndex = 4
+    ) => {
       const timeStart = Date.now();
       let errorOccured = false;
       let errorMessage = "";
       try {
         if (typeof pathOfObjectToUpdate === "string") {
-          setStateX(
-            xRefs[label].state,
-            pathOfObjectToUpdate.split(".").slice(1).join("."),
-            value
-          );
+          setStateX(xRefs[label].state, pathOfObjectToUpdate, value);
         }
       } catch (e: any) {
         console.error(e);
@@ -358,7 +359,8 @@ export function useX<T extends Object, S extends Object>(
       }
 
       const updateSet = () => {
-        let { fileName, functionName, lineNumber }: any = getCallStack();
+        let { fileName, functionName, lineNumber }: any =
+          getCallStack(stackTraceIndex);
         let fname = fileName.split("/")[fileName.split("/").length - 1];
         let changeList: any = {};
 
@@ -366,13 +368,13 @@ export function useX<T extends Object, S extends Object>(
 
         const log = {
           fileName: fname.split("?")[0],
-          functionName: functionName || "SetX",
+          functionName: functionName || "set",
           lineNumber,
           changeList,
           payload: value,
           at: formatTime(new Date()),
           index: xRefs[label].index + 1,
-          name: "setX",
+          name: nameOfSetOperation || "set",
           errorOccured,
           errorMessage,
           duration: Date.now() - timeStart + " ms",
@@ -401,6 +403,7 @@ export function useX<T extends Object, S extends Object>(
 
     // xRefs[label].actionEvents = xEvents(getMethodNames(xRefs[label].actions));
   };
+
   setAgain();
   useEffect(() => {
     setAgain();
@@ -428,16 +431,20 @@ export function useX<T extends Object, S extends Object>(
     // state: xRefs[label].state,
     // set: xRefs[label].set,
     // name: xRefs[label],
-    // dispatch: xRefs[label].set,
+    // dispatch: xRefs[label].dispatch,
     // actions: xRefs[label].actions,
     // stateChanged: count,
     // plus: xRefs[label].set,
     // refs: xRefs[label].refs,
     // // onPlus: xRefs[label].onPlus,
+
     triggerEvent: xRefs[label].triggerEvent,
     xlog: xRefs[label].xlog,
+    setItem: (key: keyof PropertiesOnly<typeof CL>, newVal: any) => {
+      xRefs[label].set(key, newVal, "setItem", 5);
+    },
     selectors: xRefs[label].selectors,
-    setX: xRefs[label].setX,
+    set: xRefs[label].set,
     ...xRefs[label].state,
     ...xRefs[label].actions,
   };
@@ -456,7 +463,7 @@ export function buildActions<T>(label: string): {
   let actions: any = {};
   methods.forEach((item: any) => {
     actions[item] = function (...props: any) {
-      xRefs[label].set(xRefs[label].state[item], ...props);
+      xRefs[label].dispatch(xRefs[label].state[item], ...props);
     };
   });
 
@@ -803,6 +810,7 @@ export const Switch = ({ State }: any) => {
                       [log.name]: {
                         changes: log.changeList,
                         payload: log.payload,
+                        "Called By": log.functionName,
                         from: log.fileName,
                         "triggered at": formatTimeExtended(log.at),
                       },
@@ -895,7 +903,10 @@ export const Switch = ({ State }: any) => {
         )}{" "}
         {State?.xlogs &&
           State?.xlogs.map((log: any, i: number) => (
-            <div key={State.xlogs.length - i}>
+            <div
+              key={State.xlogs.length - i}
+              style={{ borderBottom: "1px solid #EEE" }}
+            >
               <StateView state={log} />
             </div>
           ))}
@@ -974,7 +985,7 @@ export const SwitchY = ({ State }: any) => {
         )}
 
         {State.logs.map((log: any, index: number) => (
-          <div key={index}>
+          <div key={index} style={{ borderBottom: "1px solid #EEE" }}>
             {" "}
             <StateView state={log} />
           </div>
@@ -1400,7 +1411,7 @@ export const UseXDevTools = ({
                 <ErrorBoundary Error={ErrorComponent}>
                   <div key={key}>
                     <Collapsable
-                      label={key + " (Y)"}
+                      label={key + " (XForm)"}
                       state={stateValue}
                       isUseXState={false}
                     >
@@ -1806,6 +1817,8 @@ type YReturnType<T> = {
   logs: any[];
   data: T;
   errors: T;
+  set: (path: string, newVal: string) => void;
+  setItem: (key: keyof T, newVal: any) => void;
   resetForm: (resetWith?: T) => void;
   setData: (fn: () => void) => void;
   setErrors: (fn: () => void) => void;
@@ -1815,7 +1828,36 @@ type YReturnType<T> = {
   resetErrors: () => T;
 };
 
-export function useY<T>(
+// type Setters<T> = {
+//   [K in keyof T as `set${Capitalize<string & K>}`]: (val: any) => void;
+// };
+
+// function generateSetters<T>(props: new ()=> T, set: Function): Setters<T> {
+//   const setters: any = {};
+
+//   for (const key in props) {
+//     if (Object.prototype.hasOwnProperty.call(props, key)) {
+//       const capitalizedKey = key.charAt(0).toUpperCase() + key.slice(1);
+//       const setterName = `set${capitalizedKey}` as `set${Capitalize<
+//         string & typeof key
+//       >}`;
+//       setters[setterName] = (newVal: any) => {
+//         set(() => {
+//           props[key] = newVal;
+//         });
+//       };
+//     }
+//   }
+
+//   return setters as Setters<T>;
+// }
+
+// Example usage:
+
+/// set("a", 10);
+/// set();
+///
+export function useXForm<T>(
   CL: new () => T,
   validateForm: ValidationFunction<T>
 ): YReturnType<T> {
@@ -1891,6 +1933,16 @@ export function useY<T>(
     setErrors,
     globalError,
     setGlobalError,
+    set: (path: string, newVal: any) => {
+      setData(() => {
+        setStateX(data, path, newVal);
+      });
+    },
+    setItem: (key: keyof typeof data, newVal: any) => {
+      setData(() => {
+        data[key] = newVal;
+      });
+    },
     validate: (): boolean => {
       validateForm(data, errors);
       setShowValidations(true);
@@ -1911,59 +1963,59 @@ export function getY<T>(CL: new () => T): YReturnType<T> {
   return yRefs[CL.name];
 }
 
-export function useXForm<T>(Obj: T, validateForm: Function) {
-  const [data, setD] = useState<T>(Obj);
-  const [showValidations, setShowValidations] = useState(false);
-  const resetErrors = () => {
-    return resetPrimitiveValues(deepClone(data));
-  };
-  const [errors, setE] = useState<T>(resetErrors());
-  const [count, setCount] = useState(0);
+// export function useXForm<T>(Obj: T, validateForm: Function) {
+//   const [data, setD] = useState<T>(Obj);
+//   const [showValidations, setShowValidations] = useState(false);
+//   const resetErrors = () => {
+//     return resetPrimitiveValues(deepClone(data));
+//   };
+//   const [errors, setE] = useState<T>(resetErrors());
+//   const [count, setCount] = useState(0);
 
-  const setData = (fn: Function) => {
-    typeof fn === "function" && fn();
-    resetErrors();
-    showValidations && validateForm(data, errors);
-    if (hasNonEmptyValue(errors)) {
-    } else {
-      setShowValidations(false);
-    }
-    setCount(count + 1);
-    //@ts-ignore
-    setD(Array.isArray(data) ? [...data] : { ...data });
-  };
-  const setErrors = (fn: Function) => {
-    typeof fn === "function" && fn();
-    setCount(count + 1);
-    setE({ ...errors });
-  };
+//   const setData = (fn: Function) => {
+//     typeof fn === "function" && fn();
+//     resetErrors();
+//     showValidations && validateForm(data, errors);
+//     if (hasNonEmptyValue(errors)) {
+//     } else {
+//       setShowValidations(false);
+//     }
+//     setCount(count + 1);
+//     //@ts-ignore
+//     setD(Array.isArray(data) ? [...data] : { ...data });
+//   };
+//   const setErrors = (fn: Function) => {
+//     typeof fn === "function" && fn();
+//     setCount(count + 1);
+//     setE({ ...errors });
+//   };
 
-  return {
-    data,
-    errors,
-    resetForm: (resetWith: any = Obj) => {
-      setD(resetWith);
-      setTimeout(() => resetErrors(), 100);
-    },
-    setData,
-    // showErrors: showValidations,
-    // setShowErros: setShowValidations,
-    setErrors,
+//   return {
+//     data,
+//     errors,
+//     resetForm: (resetWith: any = Obj) => {
+//       setD(resetWith);
+//       setTimeout(() => resetErrors(), 100);
+//     },
+//     setData,
+//     // showErrors: showValidations,
+//     // setShowErros: setShowValidations,
+//     setErrors,
 
-    validate: (): boolean => {
-      validateForm(data, errors);
-      setShowValidations(true);
-      setCount(count + 1);
+//     validate: (): boolean => {
+//       validateForm(data, errors);
+//       setShowValidations(true);
+//       setCount(count + 1);
 
-      if (hasNonEmptyValue(errors)) {
-        return false;
-      } else {
-        return true;
-      }
-    },
-    resetErrors,
-  };
-}
+//       if (hasNonEmptyValue(errors)) {
+//         return false;
+//       } else {
+//         return true;
+//       }
+//     },
+//     resetErrors,
+//   };
+// }
 
 function resetPrimitiveValues(obj: any) {
   // Base case: if obj is not an object, return an empty string
@@ -2215,9 +2267,20 @@ function objFromArray(keys: string[], values: any) {
   return result;
 }
 
+// function buildFakePropsByIndex(length: number) {
+//   let t = [];
+//   for (let i = 1; i < length+1; i++) {
+//     t.push("prop" + i);
+//   }
+//   return t;
+// }
+
 function buildPayload(fn: Function, props: any[]) {
   try {
-    return objFromArray(getFunctionParameterNames(fn), props);
+    const params = getFunctionParameterNames(fn);
+    return params.join("").trim().split("").length > 0
+      ? objFromArray(params, props)
+      : props;
   } catch (e) {
     return props;
   }
