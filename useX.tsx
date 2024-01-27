@@ -205,7 +205,27 @@ type TReturnVal<T, S> = {
   xlog: (title: string, valueToLog: any) => void;
   set: (pathOfObjectToUpdate: string, newVal: any) => void;
   selectors: S;
+  setSilently: (key: keyof T, val: any) => void;
 };
+
+type MethodsWithUnderscore<T extends Object> = {
+  [K in keyof T as K extends `_${string}` ? K : never]: T[K];
+};
+
+function getUnderscoreMethods<T extends Object>(
+  obj: any,
+  name: string
+): MethodsWithUnderscore<T> {
+  const underscoreMethods: any = {};
+  const methods = getMethodNames(obj);
+  methods.forEach((method: any) => {
+    if (method.startsWith("_") && typeof obj[method] === "function") {
+      underscoreMethods[method] = obj[method].bind(xRefs[name].state);
+    }
+  });
+
+  return underscoreMethods as MethodsWithUnderscore<T>;
+}
 
 export function useX<T extends Object, S extends Object>(
   CL: new () => T,
@@ -400,6 +420,7 @@ export function useX<T extends Object, S extends Object>(
         }
       }
     };
+    xRefs[label].getActions = getUnderscoreMethods(xRefs[label].state, label);
 
     // xRefs[label].actionEvents = xEvents(getMethodNames(xRefs[label].actions));
   };
@@ -437,7 +458,9 @@ export function useX<T extends Object, S extends Object>(
     // plus: xRefs[label].set,
     // refs: xRefs[label].refs,
     // // onPlus: xRefs[label].onPlus,
-
+    setSilently: (key: string, val: any) => {
+      xRefs[label].state[key] = val;
+    },
     triggerEvent: xRefs[label].triggerEvent,
     xlog: xRefs[label].xlog,
     setItem: (key: keyof PropertiesOnly<typeof CL>, newVal: any) => {
@@ -447,6 +470,7 @@ export function useX<T extends Object, S extends Object>(
     set: xRefs[label].set,
     ...xRefs[label].state,
     ...xRefs[label].actions,
+    ...xRefs[label].getActions,
   };
 }
 
@@ -1364,7 +1388,7 @@ export const UseXDevTools = ({
             background: "white",
             transition: "right 0.2s ",
             top: 0,
-            right: showTools ? "0px" : "-400px",
+            right: showTools ? "0px" : "-420px",
             color: "#444",
             overflow: "auto",
             boxShadow: "rgb(202 204 204) 0px 0px 10px 0px",
@@ -1376,7 +1400,7 @@ export const UseXDevTools = ({
           <div
             style={{
               textAlign: "center",
-              background: "white)",
+              background: "white",
               borderLeft: "1px solid #CCC",
               padding: "10px",
             }}
@@ -1811,12 +1835,16 @@ export function hasNonEmptyValue(obj: any) {
   }
   return false;
 }
-type ValidationFunction<T> = (data: T, errors: T) => void;
+
+export type XFormErrors<T> = {
+  [K in keyof T]: T[K] extends object ? XFormErrors<T[K]> : string;
+};
+type ValidationFunction<T> = (data: T, errors: XFormErrors<T>) => any;
 
 type YReturnType<T> = {
   logs: any[];
   data: T;
-  errors: T;
+  errors: XFormErrors<T>;
   set: (path: string, newVal: string) => void;
   setItem: (key: keyof T, newVal: any) => void;
   resetForm: (resetWith?: T) => void;
@@ -1857,21 +1885,21 @@ type YReturnType<T> = {
 /// set("a", 10);
 /// set();
 ///
-export function useXForm<T>(
+export function useXForm<T extends Object>(
   CL: new () => T,
   validateForm: ValidationFunction<T>
 ): YReturnType<T> {
   const name = CL.name;
-  const [globalError, setGlobalError] = useState<string>("");
+  const [globalError, setGlobalError] = useState<any[]>([]);
 
   const [data, setD] = useState<T>(new CL());
   const [showValidations, setShowValidations] = useState(false);
 
-  const resetErrors = (): T => {
+  const resetErrors = (): XFormErrors<T> => {
     return resetPrimitiveValues(deepClone(data));
   };
 
-  const [errors, setE] = useState<T>(resetErrors());
+  const [errors, setE] = useState<XFormErrors<T>>(resetErrors());
   const [count, setCount] = useState(0);
 
   const setData = (fn: () => void) => {
@@ -1944,8 +1972,9 @@ export function useXForm<T>(
       });
     },
     validate: (): boolean => {
-      validateForm(data, errors);
+      const _globalError = validateForm(data, errors);
       setShowValidations(true);
+      _globalError && setGlobalError(_globalError);
       setCount(count + 1);
 
       if (hasNonEmptyValue(errors)) {
@@ -1957,9 +1986,11 @@ export function useXForm<T>(
     resetErrors,
   };
   return yRefs[name];
+  /// { }
+  /// errors["test.test2"];
 }
 
-export function getY<T>(CL: new () => T): YReturnType<T> {
+export function getParentXForm<T>(CL: new () => T) {
   return yRefs[CL.name];
 }
 

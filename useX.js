@@ -71,7 +71,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     return to.concat(ar || Array.prototype.slice.call(from));
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deepClone = exports.hasScrollReachedTheEnd = exports.usePagination = exports.xEvents = exports.useQ = exports.getY = exports.useXForm = exports.hasNonEmptyValue = exports.useXAsync = exports.useXFetch = exports.xFetch = exports.XFetchConfig = exports.ValueRenderer = exports.UseXDevTools = exports.Treeview = exports.XPlusWrapper = exports.SwitchY = exports.Switch = exports.StateView = exports.LabelRenderer = exports.ErrorBoundary = exports.ErrorComponent = exports.Collapsable = exports.setStateX = exports.buildActions = exports.useX = exports.useXOnAction = exports.findDiff = exports.getCallStack = exports.getListenerCount = exports.useXChannel = exports.dispatch = exports.postMessage = exports.getParentX = exports.getX = exports.getParentState = exports.xConfig = exports.yRefs = exports.xRefs = void 0;
+exports.deepClone = exports.hasScrollReachedTheEnd = exports.usePagination = exports.xEvents = exports.useQ = exports.getParentXForm = exports.useXForm = exports.hasNonEmptyValue = exports.useXAsync = exports.useXFetch = exports.xFetch = exports.XFetchConfig = exports.ValueRenderer = exports.UseXDevTools = exports.Treeview = exports.XPlusWrapper = exports.SwitchY = exports.Switch = exports.StateView = exports.LabelRenderer = exports.ErrorBoundary = exports.ErrorComponent = exports.Collapsable = exports.setStateX = exports.buildActions = exports.useX = exports.useXOnAction = exports.findDiff = exports.getCallStack = exports.getListenerCount = exports.useXChannel = exports.dispatch = exports.postMessage = exports.getParentX = exports.getX = exports.getParentState = exports.xConfig = exports.yRefs = exports.xRefs = void 0;
 var jsx_runtime_1 = require("react/jsx-runtime");
 var react_1 = require("react");
 require("./App.css");
@@ -238,6 +238,16 @@ function useXOnAction(fnCallback, actions) {
     });
 }
 exports.useXOnAction = useXOnAction;
+function getUnderscoreMethods(obj, name) {
+    var underscoreMethods = {};
+    var methods = getMethodNames(obj);
+    methods.forEach(function (method) {
+        if (method.startsWith("_") && typeof obj[method] === "function") {
+            underscoreMethods[method] = obj[method].bind(exports.xRefs[name].state);
+        }
+    });
+    return underscoreMethods;
+}
 function useX(CL, Selectors) {
     var _a = (0, react_1.useState)(0), count = _a[0], setCount = _a[1];
     (0, react_1.useEffect)(function () {
@@ -422,6 +432,7 @@ function useX(CL, Selectors) {
                 }
             }
         };
+        exports.xRefs[label].getActions = getUnderscoreMethods(exports.xRefs[label].state, label);
         // xRefs[label].actionEvents = xEvents(getMethodNames(xRefs[label].actions));
     };
     setAgain();
@@ -445,7 +456,7 @@ function useX(CL, Selectors) {
         };
     }, []);
     //
-    return __assign(__assign({ 
+    return __assign(__assign(__assign({ 
         // state: xRefs[label].state,
         // set: xRefs[label].set,
         // name: xRefs[label],
@@ -455,9 +466,11 @@ function useX(CL, Selectors) {
         // plus: xRefs[label].set,
         // refs: xRefs[label].refs,
         // // onPlus: xRefs[label].onPlus,
-        triggerEvent: exports.xRefs[label].triggerEvent, xlog: exports.xRefs[label].xlog, setItem: function (key, newVal) {
+        setSilently: function (key, val) {
+            exports.xRefs[label].state[key] = val;
+        }, triggerEvent: exports.xRefs[label].triggerEvent, xlog: exports.xRefs[label].xlog, setItem: function (key, newVal) {
             exports.xRefs[label].set(key, newVal, "setItem", 5);
-        }, selectors: exports.xRefs[label].selectors, set: exports.xRefs[label].set }, exports.xRefs[label].state), exports.xRefs[label].actions);
+        }, selectors: exports.xRefs[label].selectors, set: exports.xRefs[label].set }, exports.xRefs[label].state), exports.xRefs[label].actions), exports.xRefs[label].getActions);
 }
 exports.useX = useX;
 function buildActions(label) {
@@ -828,14 +841,14 @@ var UseXDevTools = function (_a) {
                         background: "white",
                         transition: "right 0.2s ",
                         top: 0,
-                        right: showTools ? "0px" : "-400px",
+                        right: showTools ? "0px" : "-420px",
                         color: "#444",
                         overflow: "auto",
                         boxShadow: "rgb(202 204 204) 0px 0px 10px 0px",
                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"',
                     }, children: [(0, jsx_runtime_1.jsx)("div", { style: {
                                 textAlign: "center",
-                                background: "white)",
+                                background: "white",
                                 borderLeft: "1px solid #CCC",
                                 padding: "10px",
                             }, children: (0, jsx_runtime_1.jsx)("span", { style: { fontWeight: "bold", fontSize: "18px" }, children: "x-plus Dev Tools" }) }), (0, jsx_runtime_1.jsx)(ErrorBoundary, { Error: exports.ErrorComponent, children: Object.keys(exports.xRefs).map(function (key) {
@@ -1138,7 +1151,7 @@ exports.hasNonEmptyValue = hasNonEmptyValue;
 ///
 function useXForm(CL, validateForm) {
     var name = CL.name;
-    var _a = (0, react_1.useState)(""), globalError = _a[0], setGlobalError = _a[1];
+    var _a = (0, react_1.useState)([]), globalError = _a[0], setGlobalError = _a[1];
     var _b = (0, react_1.useState)(new CL()), data = _b[0], setD = _b[1];
     var _c = (0, react_1.useState)(false), showValidations = _c[0], setShowValidations = _c[1];
     var resetErrors = function () {
@@ -1200,8 +1213,9 @@ function useXForm(CL, validateForm) {
                 data[key] = newVal;
             });
         }, validate: function () {
-            validateForm(data, errors);
+            var _globalError = validateForm(data, errors);
             setShowValidations(true);
+            _globalError && setGlobalError(_globalError);
             setCount(count + 1);
             if (hasNonEmptyValue(errors)) {
                 return false;
@@ -1211,12 +1225,14 @@ function useXForm(CL, validateForm) {
             }
         }, resetErrors: resetErrors });
     return exports.yRefs[name];
+    /// { }
+    /// errors["test.test2"];
 }
 exports.useXForm = useXForm;
-function getY(CL) {
+function getParentXForm(CL) {
     return exports.yRefs[CL.name];
 }
-exports.getY = getY;
+exports.getParentXForm = getParentXForm;
 // export function useXForm<T>(Obj: T, validateForm: Function) {
 //   const [data, setD] = useState<T>(Obj);
 //   const [showValidations, setShowValidations] = useState(false);

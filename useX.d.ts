@@ -36,6 +36,7 @@ type TReturnVal<T, S> = {
     xlog: (title: string, valueToLog: any) => void;
     set: (pathOfObjectToUpdate: string, newVal: any) => void;
     selectors: S;
+    setSilently: (key: keyof T, val: any) => void;
 };
 export declare function useX<T extends Object, S extends Object>(CL: new () => T, Selectors?: new () => S): TReturnVal<T, S> & DeepReadonly<T>;
 type MethodKeys<T> = {
@@ -114,11 +115,14 @@ interface AsyncHookResult {
 }
 export declare const useXAsync: (asyncFunction: (...args: any[]) => any) => AsyncHookResult;
 export declare function hasNonEmptyValue(obj: any): boolean;
-type ValidationFunction<T> = (data: T, errors: T) => void;
+export type XFormErrors<T> = {
+    [K in keyof T]: T[K] extends object ? XFormErrors<T[K]> : string;
+};
+type ValidationFunction<T> = (data: T, errors: XFormErrors<T>) => any;
 type YReturnType<T> = {
     logs: any[];
     data: T;
-    errors: T;
+    errors: XFormErrors<T>;
     set: (path: string, newVal: string) => void;
     setItem: (key: keyof T, newVal: any) => void;
     resetForm: (resetWith?: T) => void;
@@ -129,8 +133,8 @@ type YReturnType<T> = {
     validate: () => boolean;
     resetErrors: () => T;
 };
-export declare function useXForm<T>(CL: new () => T, validateForm: ValidationFunction<T>): YReturnType<T>;
-export declare function getY<T>(CL: new () => T): YReturnType<T>;
+export declare function useXForm<T extends Object>(CL: new () => T, validateForm: ValidationFunction<T>): YReturnType<T>;
+export declare function getParentXForm<T>(CL: new () => T): any;
 export declare function useQ<T>(val: T): {
     val: T;
     set: (newVal: T) => void;
